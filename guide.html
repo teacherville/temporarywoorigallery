@@ -93,13 +93,13 @@ textarea.cfg:focus{outline:2px solid #7aa7e8;outline-offset:1px}
 </ol>
 </section>
 <div class="state" id="state">지금 이 기기는 <b id="stateName"></b> 서버에 연결돼 있어요. <a href="./">전시회로 가기 →</a><br><button type="button" id="stateOff">연결 끊고 공용 서버로 돌아가기</button></div>
-<p class="note">공용 서버에서 만든 전시회는 옮겨지지 않아요. 연결한 뒤 새로 만들어 주세요.<br>아이들은 <b>선생님이 공유하는 링크나 QR로만</b> 들어올 수 있어요. 6자리 코드만 입력하면 공용 서버에서 찾게 돼요.</p>
+<p class="note">공용 서버에서 만든 전시회는 옮겨지지 않아요. 연결한 뒤 새로 만들어 주세요.<br>아이들은 선생님이 공유하는 <b>링크·QR</b>이나 <b>6자리 코드</b>로 들어와요.</p>
 
 <section class="step">
 <h2><span class="n">1</span>파이어베이스 프로젝트 만들기</h2>
 <ol>
 <li><a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a>에 구글 계정으로 들어가요.</li>
-<li><span class="ui">프로젝트 만들기</span>를 누르고 이름을 정해요. 예: <code>our-gallery</code></li>
+<li><span class="ui">새 Firebase 프로젝트 만들기</span>(처음이라면 <span class="ui">Firebase 프로젝트를 설정하여 시작하기</span>)를 누르고 이름을 정해요. 예: <code>our-gallery</code></li>
 <li>Gemini, 구글 애널리틱스 사용 여부를 물으면 <b>모두 꺼도 돼요</b>. 그대로 진행해 만들어요.</li>
 </ol>
 </section>
@@ -222,7 +222,7 @@ textarea.cfg:focus{outline:2px solid #7aa7e8;outline-offset:1px}
 <section class="step">
 <h2><span class="n">4</span>설정값 복사하기</h2>
 <ol>
-<li>왼쪽 위 <span class="ui">⚙ 톱니바퀴</span> → <span class="ui">일반</span>을 눌러요.</li>
+<li>왼쪽 메뉴의 <span class="ui">⚙ 설정</span>에 마우스를 올리면 나오는 <span class="ui">일반</span>을 눌러요.</li>
 <li>아래로 내리면 나오는 <b>내 앱</b>에서 <span class="ui">&lt;/&gt;</span> 웹 아이콘을 눌러요.</li>
 <li>앱 닉네임을 아무거나 적고 <span class="ui">앱 등록</span>을 눌러요. Hosting 체크는 하지 않아요.</li>
 <li>나오는 코드 중 <code>const firebaseConfig = {</code> 부터 <code>};</code> 까지 복사해요. 코드 전체를 복사해도 괜찮아요.</li>
@@ -248,7 +248,7 @@ textarea.cfg:focus{outline:2px solid #7aa7e8;outline-offset:1px}
 <ol>
 <li>5단계에서 <span class="ui">전시회 만들러 가기 →</span>를 눌러요. 우리반 전시회 첫 화면 아래에 <b>"우리 반 전용 서버 사용 중"</b>이 보이면 제대로 연결된 거예요.</li>
 <li><span class="ui">선생님 · 전시회 만들기</span>로 반, 주제, 작품 사진을 넣고 저장해요.</li>
-<li>저장하면 입장 코드, <b>링크</b>, <b>QR</b>이 나와요. 아이들에게는 <b>링크나 QR</b>을 공유해요. 링크 안에 선생님 서버 정보가 들어 있어서, 6자리 코드만 알려 주면 들어오지 못해요.</li>
+<li>저장하면 입장 코드, <b>링크</b>, <b>QR</b>이 나와요. 아이들에게는 <b>링크·QR</b>이나 <b>6자리 코드</b>를 알려 주면 돼요. 링크·QR이 가장 빠르고 확실해요.</li>
 <li>다른 PC나 태블릿에서 전시회를 고치려면, 그 기기에서도 이 페이지 5단계를 한 번 해 주세요. 같은 설정값을 붙여 넣은 뒤 <span class="ui">관리 코드로 불러오기</span>를 써요.</li>
 </ol>
 </section>
@@ -257,7 +257,7 @@ textarea.cfg:focus{outline:2px solid #7aa7e8;outline-offset:1px}
 <details><summary>"databaseURL이 없어요"가 떠요</summary><p>앱을 등록한 뒤에 데이터베이스를 만들면 설정값에서 이 줄이 빠져요. 프로젝트 설정 페이지를 새로고침한 뒤 설정값을 다시 복사해 주세요.</p></details>
 <details><summary>"익명 로그인이 꺼져 있어요"가 떠요</summary><p>3단계에서 익명 로그인을 사용 설정하고 <span class="ui">저장</span>까지 눌렀는지 확인해 주세요.</p></details>
 <details><summary>"규칙이 아직 게시되지 않았어요"가 떠요</summary><p>2단계 ③에서 규칙을 붙여 넣은 뒤 <span class="ui">게시</span>를 눌러야 해요. 기존 내용을 모두 지우고 붙여 넣었는지도 확인해 주세요.</p></details>
-<details><summary>아이들이 코드를 넣으면 "찾지 못했어요"가 떠요</summary><p>6자리 코드만 넣으면 공용 서버에서 찾게 돼요. 선생님이 공유한 링크나 QR로 들어오게 해 주세요.</p></details>
+<details><summary>아이들이 코드를 넣으면 "찾지 못했어요"가 떠요</summary><p>코드를 다시 확인해 주세요. 그래도 안 되면 선생님이 공유한 링크나 QR로 들어오게 해 주세요. 링크·QR은 선생님 서버로 바로 연결돼요.</p></details>
 <details><summary>공용 서버로 돌아가고 싶어요</summary><p>공용 주소 첫 화면의 <span class="ui">공용 서버로 돌아가기</span>를 누르거나, 이 페이지 위쪽의 <span class="ui">연결 끊고 공용 서버로 돌아가기</span>를 눌러요. 선생님 서버의 전시회는 그대로 남아 있어요.</p></details>
 
 <h2 class="sec">알아 두면 좋은 것</h2>
