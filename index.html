@@ -1521,8 +1521,9 @@ const FBX = {
 /* ---- 6자리 코드만으로 선생님 전용 서버 전시회 찾기: 공용 DB의 ptr/{code}에 "이 코드는 이 서버" 표시만 남겨요 (REST 한 번, 실시간 연결 아님) ---- */
 const DBPTR = {
   url(path) { const u = window.WG_SHARED_URL; return u ? u + "/" + path + ".json" : ""; },
-  async get(code) { const u = this.url("ptr/" + code); if (!u) return null; try { const r = await fetch(u, { cache: "no-store" }); if (!r.ok) return null; const v = await r.json(); return v && window.WG_OK && window.WG_OK(v) ? v : null; } catch (_) { return null; } },
-  async sharedHas(code) { const u = this.url("codes/" + code + "/code"); if (!u) return false; try { const r = await fetch(u, { cache: "no-store" }); return r.ok && (await r.json()) != null; } catch (_) { return false; } },
+  async fetch(u, opt) { const ac = typeof AbortController === "function" ? new AbortController() : null, t = setTimeout(() => ac && ac.abort(), 6000); try { return await fetch(u, Object.assign({ cache: "no-store" }, opt || {}, ac ? { signal: ac.signal } : {})); } finally { clearTimeout(t); } },
+  async get(code) { const u = this.url("ptr/" + code); if (!u) return null; try { const r = await this.fetch(u); if (!r.ok) return null; const v = await r.json(); return v && window.WG_OK && window.WG_OK(v) ? v : null; } catch (_) { return null; } },
+  async sharedHas(code) { const u = this.url("codes/" + code + "/code"); if (!u) return false; try { const r = await this.fetch(u); return r.ok && (await r.json()) != null; } catch (_) { return false; } },
   mine() { const c = window.FIREBASE_CONFIG || {}; return { a: c.apiKey, d: String(c.databaseURL || "").replace(/^https?:\/\//, "").replace(/\/.*$/, ""), p: c.projectId }; },
   async put(code) { const u = this.url("ptr/" + code); if (!u || !window.WG_OWN) return false; try { const r = await fetch(u, { method: "PUT", body: JSON.stringify(Object.assign(this.mine(), { t: Date.now() })) }); return r.ok; } catch (_) { return false; } },
 };
@@ -2993,11 +2994,16 @@ $("#joinForm").addEventListener("submit", async e => {
   e.preventDefault(); const code = $("#jCode").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ""), msg = $("#jMsg"), btn = $("#btnJoin"); msg.textContent = "";
   if (code.length < 6) { msg.textContent = "선생님께 받은 6자리 코드를 넣어 주세요"; return; }
   btn.disabled = true; btn.textContent = "찾는 중…";
-  try { const room = await DATA.findRoom(code); if (room && (room.closed || room.open === false)) { msg.textContent = "이 전시회는 지금 닫혀 있어요. 선생님께 여쭤봐 주세요"; return; } if (!room && window.WG_OWN !== "saved") { const pt = await DBPTR.get(code), here = window.WG_OWN ? DBPTR.mine().p : window.WG_SHARED_PID;
-      if (pt && pt.p !== here) { msg.textContent = "선생님 전용 전시회로 이동해요…"; location.href = location.pathname + "?db=" + window.WG_ENC({ a: pt.a, d: pt.d, p: pt.p }) + "#" + code; return; }
-      if (window.WG_OWN && await DBPTR.sharedHas(code)) { msg.textContent = "전시회로 이동해요…"; location.href = location.pathname + "#" + code; return; } }
+  try {
+    // 1) 안내판(ptr)을 먼저 한 번 조회해요(REST, 실시간 연결 아님). 공용 서버가 100명으로 꽉 차도 전용 서버 전시회로 바로 갈 수 있어요
+    if (window.WG_OWN !== "saved") { const pt = await DBPTR.get(code), here = window.WG_OWN ? DBPTR.mine().p : window.WG_SHARED_PID;
+      if (pt && pt.p !== here) { msg.textContent = "선생님 전용 전시회로 이동해요…"; location.href = location.pathname + "?db=" + window.WG_ENC({ a: pt.a, d: pt.d, p: pt.p }) + "#" + code; return; } }
+    // 2) 지금 서버에서 찾기. 서버가 붐벼 답이 없으면 끝없이 기다리지 않고 안내해요
+    const room = await Promise.race([DATA.findRoom(code), new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("slow"), { code: "slow" })), 12000))]);
+    if (room && (room.closed || room.open === false)) { msg.textContent = "이 전시회는 지금 닫혀 있어요. 선생님께 여쭤봐 주세요"; return; }
+    if (!room && window.WG_OWN === "link" && await DBPTR.sharedHas(code)) { msg.textContent = "전시회로 이동해요…"; location.href = location.pathname + "#" + code; return; }
     if (!room) { msg.textContent = ONLINE_WANTED() && !DATA.fb ? "인터넷에 연결되지 않아 전시회를 찾지 못했어요. 페이지를 새로고침해 주세요" : (window.WG_OWN ? "이 코드로 된 전시회를 찾지 못했어요. 코드를 다시 확인해 주세요" : "이 코드로 된 전시회를 찾지 못했어요. 코드를 다시 확인해 주세요"); return; } ST.teacherPreview = false; openWho(room); }
-  catch (e2) { console.warn(e2); msg.textContent = "전시회를 찾는 중에 문제가 생겼어요. 잠시 뒤에 다시 해 주세요"; }
+  catch (e2) { console.warn(e2); msg.textContent = e2 && e2.code === "slow" ? "접속이 몰려 전시회를 찾지 못했어요. 잠시 뒤에 다시 해 주세요" : "전시회를 찾는 중에 문제가 생겼어요. 잠시 뒤에 다시 해 주세요"; }
   finally { btn.disabled = false; btn.textContent = "다음"; }
 });
 
