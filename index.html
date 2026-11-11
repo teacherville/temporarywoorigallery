@@ -21,7 +21,7 @@ window.FIREBASE_CONFIG = {
 </script>
 <script>
 /* 우리 반 전용 서버: 선생님이 guide.html에서 연결한 자기 파이어베이스를 쓰게 해요.
-   - 선생님 기기: guide.html이 저장한 값(localStorage "wg_own_db")
+   - 선생님: guide.html 5단계가 만들어 주는 "선생님 전용 링크"(?db=…&tk=…)로 열 때만 (브라우저에 저장하지 않아요)
    - 아이들 기기: 선생님이 준 링크·QR의 ?db= 값 (저장하지 않아요). 6자리 코드만 넣으면 공용 DB의 ptr/{code}를 보고 찾아가요 */
 (function () {
   const SHARED = window.FIREBASE_CONFIG || {};
@@ -35,21 +35,15 @@ window.FIREBASE_CONFIG = {
   if (m) { try { own = dec(m[1]); from = "link"; } catch (_) { own = null; } }
   // 선생님 전용 링크(?db=…&tk=…): 어느 브라우저·시크릿 창에서 열어도 선생님 모드로 열려요 (저장하지 않아요)
   if (m && tkm && ok(own)) { from = "saved"; window.WG_TK = tkm[1]; window.WG_TKLINK = true; }
-  if (!ok(own)) { own = null; try { own = JSON.parse(localStorage.getItem("wg_own_db") || "null"); from = "saved"; } catch (_) { own = null; }
-    // "공용 서버로 돌아가기"는 연결을 지우지 않고 잠시 꺼 두기만 해요. 한 번 눌러 다시 켤 수 있어요
-    let off = false; try { off = localStorage.getItem("wg_own_off") === "1"; } catch (_) {}
-    if (off && ok(own)) { window.WG_OWN_PAUSED = own.p; own = null; } }
+  if (!ok(own)) own = null;
+  try { localStorage.removeItem("wg_own_db"); localStorage.removeItem("wg_own_off"); } catch (_) {} // 예전 방식(브라우저에 연결 저장)은 쓰지 않아요
   if (ok(own) && own.p !== window.WG_SHARED_PID) {
     window.FIREBASE_CONFIG = { apiKey: own.a, authDomain: own.p + ".firebaseapp.com", databaseURL: "https://" + own.d, projectId: own.p };
     window.WG_OWN = from; window.WG_DB = enc({ a: own.a, d: own.d, p: own.p });
-    if (from === "saved" && !window.WG_TK) { // 이 브라우저에 연결해 둔 선생님: 전용 링크용 비밀 값을 하나 만들어 둬요
-      try { let t = localStorage.getItem("wg_tk"); if (!/^[A-Z0-9]{20,40}$/.test(t || "")) { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", r = new Uint32Array(24); crypto.getRandomValues(r); t = [...r].map(x => A[x % A.length]).join(""); localStorage.setItem("wg_tk", t); } window.WG_TK = t; } catch (_) {}
-    }
     if (window.WG_TK) window.WG_TEACHER_URL = location.origin + location.pathname + "?db=" + window.WG_DB + "&tk=" + window.WG_TK;
   }
   window.WG_ENC = enc; window.WG_OK = ok;
-  window.WG_LEAVE_OWN = () => { try { localStorage.setItem("wg_own_off", "1"); } catch (_) {} location.href = location.pathname; };
-  window.WG_BACK_OWN = () => { try { localStorage.removeItem("wg_own_off"); } catch (_) {} location.href = location.pathname; };
+
 })();
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -825,8 +819,7 @@ html:not(.touch) #emoBar,html:not(.touch) #camBtns{width:252px}
     </div>
     <button class="linkbtn" id="goSample" type="button">예시 전시관 둘러보기 →</button>
     <button class="readme" id="goGuide" type="button"><span class="rm-tag">꼭 읽어 주세요</span>이용 안내</button>
-    <div class="ownchip" id="ownChip" hidden>우리 반 전용 서버 사용 중 · <button type="button" id="ownLeave">공용 서버로 돌아가기</button></div>
-    <div class="ownchip" id="ownBack" hidden>지금은 공용 서버 · <button type="button" id="ownBackBtn">내 전용 서버로 돌아가기</button></div>
+
   </div>
 </div>
 
@@ -932,7 +925,7 @@ html:not(.touch) #emoBar,html:not(.touch) #camBtns{width:252px}
         <ul>
           <li>이 전시회는 선생님 개인 파이어베이스에 저장돼요. 티처빌은 저장된 내용을 보거나 관리하지 않아요.</li>
         </ul>
-        <button class="btn-sub nt-link" type="button" id="ntLeave" hidden>공용 서버로 돌아가기</button>
+        
       </div>
       <h4>서비스와 저작권</h4>
       <ul>
@@ -2028,8 +2021,6 @@ $("#vClap").onclick = () => GB.s && clap(GB.s);
     $("#ntWhere").textContent = "저장 위치: 선생님의 Google Firebase"; $("#ntDel").hidden = true; $("#ntBusy").hidden = true; $("#ntOwn").hidden = false;
     document.querySelectorAll(".pn-where").forEach(li => li.textContent = "작품과 글은 선생님의 Google Firebase에 저장돼요."); document.querySelectorAll(".pn-del").forEach(li => li.hidden = true);
   }
-  if (own === "saved") { $("#ownChip").hidden = false; $("#ntLeave").hidden = false; const leave = () => confirmBox("공용 서버로 돌아갈까요? 전용 서버 연결은 이 기기에 그대로 남아 있어서, 첫 화면의 ‘내 전용 서버로 돌아가기’를 누르면 바로 돌아와요.", "돌아가기", () => window.WG_LEAVE_OWN()); $("#ownLeave").onclick = leave; $("#ntLeave").onclick = leave; }
-  if (!own && window.WG_OWN_PAUSED) { $("#ownBack").hidden = false; $("#ownBackBtn").onclick = () => window.WG_BACK_OWN(); }
 })();
 document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => { const sh = b.closest(".sheet"); sh.hidden = true; if (sh.id === "view") GB.s = null; }));
 ["view", "leafSheet", "msgSheet", "wallSheet"].forEach(id => $("#" + id).addEventListener("click", e => { if (e.target.id === id) { e.target.hidden = true; if (id === "view") GB.s = null; } }));
@@ -3072,7 +3063,7 @@ async function tkSync() {
 function tkBox() {
   const box = $("#tkBox"); if (!box) return; box.hidden = !window.WG_TEACHER_URL || !DATA.fb; if (box.hidden) return;
   if (TE.tkErr) { box.innerHTML = `<b>선생님 전용 링크를 쓰려면 규칙을 다시 게시해 주세요</b><p>선생님 파이어베이스의 규칙이 예전 것이에요. 안내 페이지 2단계의 규칙을 다시 붙여 넣고 게시해 주세요.</p><a class="btn-sub slim" href="guide.html#rules">안내 페이지 열기</a>`; return; }
-  box.innerHTML = `<b>${ic("lock")} 선생님 전용 링크</b><p>이 링크를 <b>즐겨찾기</b>해 두면 다른 컴퓨터·브라우저·시크릿 창에서도 내 전시회를 그대로 열고 고칠 수 있어요. <b>아이들에게는 주지 마세요.</b></p><button class="btn-main slim" type="button" id="tkCopy">선생님 전용 링크 복사</button><input class="tklink" id="tkLink" readonly hidden>`;
+  box.innerHTML = `<b>${ic("lock")} 선생님 전용 링크</b><p>내 전시회는 <b>이 링크로 열 때만</b> 보여요. 즐겨찾기해 두면 어느 컴퓨터·브라우저·시크릿 창에서든 그대로 열고 고칠 수 있어요. <b>아이들에게는 주지 마세요.</b> (아이들에게는 전시회의 코드·링크·QR을 줘요)</p><button class="btn-main slim" type="button" id="tkCopy">선생님 전용 링크 복사</button><input class="tklink" id="tkLink" readonly hidden>`;
   $("#tkCopy").onclick = async () => { try { await navigator.clipboard.writeText(window.WG_TEACHER_URL); toast("선생님 전용 링크를 복사했어요. 즐겨찾기나 메모에 붙여 넣어 두세요", 3600); } catch (_) { const i = $("#tkLink"); i.hidden = false; i.value = window.WG_TEACHER_URL; i.focus(); i.select(); toast("링크를 길게 눌러 복사해 주세요", 3200); } };
 }
 // on the github copy the teacher signs in with google to make and keep shows; children never need to

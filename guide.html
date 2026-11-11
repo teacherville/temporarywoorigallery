@@ -89,11 +89,10 @@ textarea.cfg:focus{outline:2px solid #7aa7e8;outline-offset:1px}
 <p>화면은 지금 쓰는 티처빌 주소 그대로예요. 작품을 보관하는 곳(파이어베이스)만 선생님 것으로 바꿔요. 깃허브에 올리거나 코드를 고칠 일은 없어요.</p>
 <ol class="flow">
 <li><b>1~4단계 · 파이어베이스</b>선생님 구글 계정으로 보관 공간을 만들고, 그 주소(설정값)를 복사해요.</li>
-<li><b>5단계 · 이 페이지</b>복사한 설정값을 이 페이지 입력 칸에 붙여 넣어요. 이 컴퓨터 브라우저가 기억해요.</li>
-<li><b>6단계 · 우리반 전시회</b>평소처럼 전시회를 만들고 링크·QR을 공유해요. 링크에 선생님 서버 정보가 자동으로 붙어요.</li>
+<li><b>5단계 · 이 페이지</b>복사한 설정값을 붙여 넣으면 <b>선생님 전용 링크</b>가 나와요. 즐겨찾기해 두세요.</li>
+<li><b>6단계 · 우리반 전시회</b>선생님 전용 링크로 열어 전시회를 만들고, 아이들에게는 코드·링크·QR을 알려 줘요.</li>
 </ol>
 </section>
-<div class="state" id="state">지금 이 기기는 <b id="stateName"></b> 서버에 연결돼 있어요. <a href="./">전시회로 가기 →</a><br><button type="button" id="stateOff">연결 끊고 공용 서버로 돌아가기</button></div>
 <p class="note">공용 서버에서 만든 전시회는 옮겨지지 않아요. 연결한 뒤 새로 만들어 주세요.<br>아이들은 선생님이 공유하는 <b>링크·QR</b>이나 <b>6자리 코드</b>로 들어와요.</p>
 
 <section class="step">
@@ -256,10 +255,10 @@ textarea.cfg:focus{outline:2px solid #7aa7e8;outline-offset:1px}
 <section class="step">
 <h2><span class="n">6</span>전시회 만들고 아이들에게 공유하기</h2>
 <ol>
-<li>5단계에서 <span class="ui">전시회 만들러 가기 →</span>를 눌러요. 우리반 전시회 첫 화면 아래에 <b>"우리 반 전용 서버 사용 중"</b>이 보이면 제대로 연결된 거예요.</li>
+<li>5단계에서 나온 <b>선생님 전용 링크</b>를 즐겨찾기해요. 이 링크로 열면 바로 선생님 화면이 열려요. 기본 주소로 열면 공용 서버 화면이 나와요.</li>
 <li><span class="ui">선생님 · 전시회 만들기</span>로 반, 주제, 작품 사진을 넣고 저장해요.</li>
 <li>저장하면 입장 코드, <b>링크</b>, <b>QR</b>이 나와요. 아이들에게는 <b>링크·QR</b>이나 <b>6자리 코드</b>를 알려 주면 돼요. 링크·QR이 가장 빠르고 확실해요.</li>
-<li>다른 PC·태블릿·브라우저에서 전시회를 고치려면 <b>선생님 전용 링크</b>로 열어요. 5단계 끝이나 선생님 화면의 <span class="ui">선생님 전용 링크 복사</span>로 받을 수 있어요. 설정값을 다시 붙여 넣을 필요가 없어요.</li>
+<li>다른 PC·태블릿·브라우저·시크릿 창에서도 <b>선생님 전용 링크</b>로 열면 돼요. 링크는 선생님 화면의 <span class="ui">선생님 전용 링크 복사</span>로도 다시 받을 수 있어요.</li>
 </ol>
 </section>
 
@@ -268,7 +267,7 @@ textarea.cfg:focus{outline:2px solid #7aa7e8;outline-offset:1px}
 <details><summary>"익명 로그인이 꺼져 있어요"가 떠요</summary><p>3단계에서 익명 로그인을 사용 설정하고 <span class="ui">저장</span>까지 눌렀는지 확인해 주세요.</p></details>
 <details><summary>"규칙이 아직 게시되지 않았어요"가 떠요</summary><p>2단계 ③에서 규칙을 붙여 넣은 뒤 <span class="ui">게시</span>를 눌러야 해요. 기존 내용을 모두 지우고 붙여 넣었는지도 확인해 주세요.</p></details>
 <details><summary>아이들이 코드를 넣으면 "찾지 못했어요"가 떠요</summary><p>코드를 다시 확인해 주세요. 그래도 안 되면 선생님이 공유한 링크나 QR로 들어오게 해 주세요. 링크·QR은 선생님 서버로 바로 연결돼요.</p></details>
-<details><summary>공용 서버로 돌아가고 싶어요</summary><p>첫 화면의 <span class="ui">공용 서버로 돌아가기</span>를 누르면 연결은 이 기기에 남겨 둔 채 공용 서버로 바뀌어요. 다시 쓰려면 첫 화면의 <span class="ui">내 전용 서버로 돌아가기</span>를 한 번 누르면 돼요. 연결을 완전히 지우려면 이 페이지 위쪽의 <span class="ui">연결 끊고 공용 서버로 돌아가기</span>를 눌러요. 어느 쪽이든 선생님 서버의 전시회는 그대로 남아 있어요.</p></details>
+<details><summary>선생님 전용 링크를 잃어버렸어요</summary><p>이 페이지 5단계를 다시 하면 링크가 다시 나와요. 예전에 쓰던 컴퓨터·브라우저라면 같은 링크가 나와요. 다른 브라우저에서 했다면 새 링크가 나오는데, 그 링크로 열고 <span class="ui">관리 코드로 불러오기</span>로 전시회를 한 번 불러오면 다음부터는 새 링크에도 보여요.</p></details>
 
 <h2 class="sec">알아 두면 좋은 것</h2>
 <ul>
@@ -299,12 +298,7 @@ document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click"
   b.textContent = "복사했어요"; setTimeout(() => b.textContent = old, 1800);
 }));
 
-// current state
-function saved() { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch (_) { return null; } }
-function paused() { try { return localStorage.getItem("wg_own_off") === "1"; } catch (_) { return false; } }
-function paintState() { const c = saved(); $("#state").classList.toggle("on", !!c); if (c) $("#stateName").textContent = c.p + (paused() ? " (지금은 잠시 공용 서버 사용 중)" : ""); }
-$("#stateOff").onclick = () => { try { localStorage.removeItem(KEY); localStorage.removeItem("wg_own_off"); } catch (_) {} paintState(); out("good", "연결을 끊었어요. 이제 이 기기는 공용 서버를 써요."); };
-paintState();
+try { localStorage.removeItem(KEY); localStorage.removeItem("wg_own_off"); } catch (_) {} // 예전 방식(브라우저에 연결 저장)은 쓰지 않아요
 
 // read the pasted snippet (JS object, JSON, or just the lines)
 function parse(text) {
@@ -354,14 +348,10 @@ $("#go").onclick = async () => {
         : "<b>데이터베이스를 확인하지 못했어요.</b> (" + esc(code) + ")";
       out("bad", "<ul class='checks'>" + steps.map(([t, v]) => `<li class="${v === true ? "y" : v === false ? "n" : ""}">${t}</li>`).join("") + "</ul><p style='margin:10px 0 0'>" + why + "</p>"); return;
     }
-    try { localStorage.setItem(KEY, JSON.stringify({ a: c.apiKey, d: host, p: c.projectId })); localStorage.removeItem("wg_own_off"); localStorage.setItem("wg_tk", tk()); } catch (_) {
-      out("bad", "<b>이 브라우저에 저장하지 못했어요.</b><br>시크릿 창이라면 일반 창에서 다시 해 주세요."); return;
-    }
-    paintState();
     const turl = new URL("./", location.href).href + "?db=" + enc({ a: c.apiKey, d: host, p: c.projectId }) + "&tk=" + tk();
-    out("good", "<ul class='checks'>" + steps.map(([t]) => `<li class="y">${t}</li>`).join("") + "</ul><p style='margin:10px 0 0'><b>연결됐어요.</b> 이제 이 기기에서 만드는 전시회는 선생님 서버에 저장돼요.</p>"
-      + "<div class='tkl'><b>🔑 선생님 전용 링크</b><p>이 링크를 <b>즐겨찾기</b>해 두세요. 다른 컴퓨터·브라우저·시크릿 창에서 이 링크로 열면 설정값을 다시 붙여 넣지 않아도 내 전시회가 그대로 열려요. <b>아이들에게는 주지 마세요.</b></p><input id='tkUrl' readonly value='" + esc(turl) + "'><button class='btn sub' type='button' id='tkCopy'>선생님 전용 링크 복사</button></div>"
-      + "<a class='btn' href='" + esc(turl) + "'>전시회 만들러 가기 →</a>");
+    out("good", "<ul class='checks'>" + steps.map(([t]) => `<li class="y">${t}</li>`).join("") + "</ul><p style='margin:10px 0 0'><b>연결됐어요.</b> 아래 선생님 전용 링크로 열면 전시회가 선생님 서버에 저장돼요.</p>"
+      + "<div class='tkl'><b>🔑 선생님 전용 링크</b><p>내 전시회는 <b>이 링크로 열 때만</b> 보여요. 꼭 <b>즐겨찾기</b>해 두세요. 어느 컴퓨터·브라우저·시크릿 창에서든 이 링크로 열면 돼요. <b>아이들에게는 주지 마세요.</b></p><input id='tkUrl' readonly value='" + esc(turl) + "'><button class='btn sub' type='button' id='tkCopy'>선생님 전용 링크 복사</button></div>"
+      + "<a class='btn' href='" + esc(turl) + "' style='margin-top:12px;width:100%'>선생님 전용 링크로 열기 →</a>");
     $("#tkCopy").onclick = async () => { const i = $("#tkUrl"); try { await navigator.clipboard.writeText(i.value); } catch (_) { i.select(); document.execCommand("copy"); } $("#tkCopy").textContent = "복사했어요"; setTimeout(() => $("#tkCopy").textContent = "선생님 전용 링크 복사", 1800); };
   } finally {
     btn.disabled = false; btn.textContent = "연결 확인하기";
