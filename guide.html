@@ -258,7 +258,7 @@ textarea.cfg:focus{outline:2px solid #7aa7e8;outline-offset:1px}
 <details><summary>"익명 로그인이 꺼져 있어요"가 떠요</summary><p>3단계에서 익명 로그인을 사용 설정하고 <span class="ui">저장</span>까지 눌렀는지 확인해 주세요.</p></details>
 <details><summary>"규칙이 아직 게시되지 않았어요"가 떠요</summary><p>2단계 ③에서 규칙을 붙여 넣은 뒤 <span class="ui">게시</span>를 눌러야 해요. 기존 내용을 모두 지우고 붙여 넣었는지도 확인해 주세요.</p></details>
 <details><summary>아이들이 코드를 넣으면 "찾지 못했어요"가 떠요</summary><p>코드를 다시 확인해 주세요. 그래도 안 되면 선생님이 공유한 링크나 QR로 들어오게 해 주세요. 링크·QR은 선생님 서버로 바로 연결돼요.</p></details>
-<details><summary>공용 서버로 돌아가고 싶어요</summary><p>공용 주소 첫 화면의 <span class="ui">공용 서버로 돌아가기</span>를 누르거나, 이 페이지 위쪽의 <span class="ui">연결 끊고 공용 서버로 돌아가기</span>를 눌러요. 선생님 서버의 전시회는 그대로 남아 있어요.</p></details>
+<details><summary>공용 서버로 돌아가고 싶어요</summary><p>첫 화면의 <span class="ui">공용 서버로 돌아가기</span>를 누르면 연결은 이 기기에 남겨 둔 채 공용 서버로 바뀌어요. 다시 쓰려면 첫 화면의 <span class="ui">내 전용 서버로 돌아가기</span>를 한 번 누르면 돼요. 연결을 완전히 지우려면 이 페이지 위쪽의 <span class="ui">연결 끊고 공용 서버로 돌아가기</span>를 눌러요. 어느 쪽이든 선생님 서버의 전시회는 그대로 남아 있어요.</p></details>
 
 <h2 class="sec">알아 두면 좋은 것</h2>
 <ul>
@@ -291,8 +291,9 @@ document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click"
 
 // current state
 function saved() { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch (_) { return null; } }
-function paintState() { const c = saved(); $("#state").classList.toggle("on", !!c); if (c) $("#stateName").textContent = c.p; }
-$("#stateOff").onclick = () => { try { localStorage.removeItem(KEY); } catch (_) {} paintState(); out("good", "연결을 끊었어요. 이제 이 기기는 공용 서버를 써요."); };
+function paused() { try { return localStorage.getItem("wg_own_off") === "1"; } catch (_) { return false; } }
+function paintState() { const c = saved(); $("#state").classList.toggle("on", !!c); if (c) $("#stateName").textContent = c.p + (paused() ? " (지금은 잠시 공용 서버 사용 중)" : ""); }
+$("#stateOff").onclick = () => { try { localStorage.removeItem(KEY); localStorage.removeItem("wg_own_off"); } catch (_) {} paintState(); out("good", "연결을 끊었어요. 이제 이 기기는 공용 서버를 써요."); };
 paintState();
 
 // read the pasted snippet (JS object, JSON, or just the lines)
@@ -341,7 +342,7 @@ $("#go").onclick = async () => {
         : "<b>데이터베이스를 확인하지 못했어요.</b> (" + esc(code) + ")";
       out("bad", "<ul class='checks'>" + steps.map(([t, v]) => `<li class="${v === true ? "y" : v === false ? "n" : ""}">${t}</li>`).join("") + "</ul><p style='margin:10px 0 0'>" + why + "</p>"); return;
     }
-    try { localStorage.setItem(KEY, JSON.stringify({ a: c.apiKey, d: host, p: c.projectId })); } catch (_) {
+    try { localStorage.setItem(KEY, JSON.stringify({ a: c.apiKey, d: host, p: c.projectId })); localStorage.removeItem("wg_own_off"); } catch (_) {
       out("bad", "<b>이 브라우저에 저장하지 못했어요.</b><br>시크릿 창이라면 일반 창에서 다시 해 주세요."); return;
     }
     paintState();

@@ -32,13 +32,17 @@ window.FIREBASE_CONFIG = {
   let own = null, from = "";
   const m = location.search.match(/[?&]db=([A-Za-z0-9_-]+)/);
   if (m) { try { own = dec(m[1]); from = "link"; } catch (_) { own = null; } }
-  if (!ok(own)) { own = null; try { own = JSON.parse(localStorage.getItem("wg_own_db") || "null"); from = "saved"; } catch (_) { own = null; } }
+  if (!ok(own)) { own = null; try { own = JSON.parse(localStorage.getItem("wg_own_db") || "null"); from = "saved"; } catch (_) { own = null; }
+    // "공용 서버로 돌아가기"는 연결을 지우지 않고 잠시 꺼 두기만 해요. 한 번 눌러 다시 켤 수 있어요
+    let off = false; try { off = localStorage.getItem("wg_own_off") === "1"; } catch (_) {}
+    if (off && ok(own)) { window.WG_OWN_PAUSED = own.p; own = null; } }
   if (ok(own) && own.p !== window.WG_SHARED_PID) {
     window.FIREBASE_CONFIG = { apiKey: own.a, authDomain: own.p + ".firebaseapp.com", databaseURL: "https://" + own.d, projectId: own.p };
     window.WG_OWN = from; window.WG_DB = enc({ a: own.a, d: own.d, p: own.p });
   }
   window.WG_ENC = enc; window.WG_OK = ok;
-  window.WG_LEAVE_OWN = () => { try { localStorage.removeItem("wg_own_db"); } catch (_) {} location.href = location.pathname; };
+  window.WG_LEAVE_OWN = () => { try { localStorage.setItem("wg_own_off", "1"); } catch (_) {} location.href = location.pathname; };
+  window.WG_BACK_OWN = () => { try { localStorage.removeItem("wg_own_off"); } catch (_) {} location.href = location.pathname; };
 })();
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -66,7 +70,7 @@ const NETWATCH = (() => {
   function show(title, body, buttons) {
     if (closed) return;
     T.textContent = title; P.textContent = body; row.innerHTML = "";
-    buttons.forEach(([label, cls, act]) => { const b = document.createElement(typeof act === "string" ? "a" : "button"); b.className = cls; b.textContent = label; if (typeof act === "string") { b.href = act; b.target = "_blank"; b.rel = "noopener"; } else { b.type = "button"; b.onclick = act; } row.append(b); });
+    buttons.forEach(([label, cls, act]) => { const b = document.createElement(typeof act === "string" ? "a" : "button"); b.className = cls; b.textContent = label; if (typeof act === "string") { b.href = act; } else { b.type = "button"; b.onclick = act; } row.append(b); });
     el.classList.add("on");
   }
   function hide() { el.classList.remove("on"); }
@@ -251,6 +255,11 @@ input.f::placeholder,textarea.f::placeholder{color:#a9a0ae}
 .card.notice li{margin:4px 0;word-break:keep-all;overflow-wrap:anywhere}
 .card.notice li[hidden],.card.notice div[hidden],.card.notice button[hidden]{display:none}
 .card.notice .nt-link{display:inline-flex;margin-top:10px;text-decoration:none}
+/* "접속이 막힐 때" — 눈에 잘 띄는 안내 상자와 큰 버튼 */
+.card.notice #ntBusy{background:#e8f3f1;border:1.5px solid #bfdcd7;border-radius:18px;padding:14px 16px 16px;margin-top:6px}
+.card.notice #ntBusy h4{margin-top:0;color:#1f5f59}
+.card.notice #ntBusy .nt-link{display:flex;width:100%;justify-content:center;align-items:center;gap:8px;min-height:54px;margin-top:12px;border:0;border-radius:16px;background:linear-gradient(135deg,#3f9a90,#2a6d67);color:#fff;font-size:17px;font-weight:700;box-shadow:0 8px 20px rgba(42,109,103,.28);transition:transform .15s,box-shadow .15s}
+.card.notice #ntBusy .nt-link:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(42,109,103,.36)}
 .card.notice footer{justify-content:space-between}
 .card.notice .nt-ask{color:var(--sub);font-size:14px}
 .card.notice .ig{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
@@ -806,6 +815,7 @@ html:not(.touch) #emoBar,html:not(.touch) #camBtns{width:252px}
     <button class="linkbtn" id="goSample" type="button">예시 전시관 둘러보기 →</button>
     <button class="readme" id="goGuide" type="button"><span class="rm-tag">꼭 읽어 주세요</span>이용 안내</button>
     <div class="ownchip" id="ownChip" hidden>우리 반 전용 서버 사용 중 · <button type="button" id="ownLeave">공용 서버로 돌아가기</button></div>
+    <div class="ownchip" id="ownBack" hidden>지금은 공용 서버 · <button type="button" id="ownBackBtn">내 전용 서버로 돌아가기</button></div>
   </div>
 </div>
 
@@ -904,7 +914,7 @@ html:not(.touch) #emoBar,html:not(.touch) #camBtns{width:252px}
           <li>무료 서버로 운영돼 동시에 들어올 수 있는 인원에 제한이 있어요. 여러 반이 한꺼번에 쓰면 입장이 늦어지거나 막힐 수 있어요.</li>
           <li>이럴 때는 선생님 구글 계정으로 <b>우리 반 전용 서버</b>를 만들어 쓸 수 있어요. 무료예요.</li>
         </ul>
-        <a class="btn-sub nt-link" href="guide.html" target="_blank" rel="noopener">우리 반 전용으로 만들기 →</a>
+        <a class="btn-sub nt-link" href="guide.html">우리 반 전용으로 만들기 →</a>
       </div>
       <div id="ntOwn" hidden>
         <h4>선생님 전용 서버</h4>
@@ -2005,7 +2015,8 @@ $("#vClap").onclick = () => GB.s && clap(GB.s);
     $("#ntWhere").textContent = "저장 위치: 선생님의 Google Firebase"; $("#ntDel").hidden = true; $("#ntBusy").hidden = true; $("#ntOwn").hidden = false;
     document.querySelectorAll(".pn-where").forEach(li => li.textContent = "작품과 글은 선생님의 Google Firebase에 저장돼요."); document.querySelectorAll(".pn-del").forEach(li => li.hidden = true);
   }
-  if (own === "saved") { $("#ownChip").hidden = false; $("#ntLeave").hidden = false; const leave = () => confirmBox("공용 서버로 돌아갈까요? 선생님 전용 서버의 전시회는 그대로 남아 있고, 연결하기 화면에서 다시 연결할 수 있어요.", "돌아가기", () => window.WG_LEAVE_OWN()); $("#ownLeave").onclick = leave; $("#ntLeave").onclick = leave; }
+  if (own === "saved") { $("#ownChip").hidden = false; $("#ntLeave").hidden = false; const leave = () => confirmBox("공용 서버로 돌아갈까요? 전용 서버 연결은 이 기기에 그대로 남아 있어서, 첫 화면의 ‘내 전용 서버로 돌아가기’를 누르면 바로 돌아와요.", "돌아가기", () => window.WG_LEAVE_OWN()); $("#ownLeave").onclick = leave; $("#ntLeave").onclick = leave; }
+  if (!own && window.WG_OWN_PAUSED) { $("#ownBack").hidden = false; $("#ownBackBtn").onclick = () => window.WG_BACK_OWN(); }
 })();
 document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => { const sh = b.closest(".sheet"); sh.hidden = true; if (sh.id === "view") GB.s = null; }));
 ["view", "leafSheet", "msgSheet", "wallSheet"].forEach(id => $("#" + id).addEventListener("click", e => { if (e.target.id === id) { e.target.hidden = true; if (id === "view") GB.s = null; } }));
