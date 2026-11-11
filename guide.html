@@ -73,6 +73,7 @@ textarea.cfg:focus{outline:2px solid #7aa7e8;outline-offset:1px}
 @media (max-width:560px){.flow{grid-template-columns:1fr}}
 .state{background:var(--paper);border:1.5px solid var(--ok);border-radius:16px;padding:14px 18px;margin:0 0 24px;font-size:15px;display:none}
 .state.on{display:block}
+.tkl{background:#fff;border:1.5px solid #bfdcd7;border-radius:14px;padding:12px 14px;margin:12px 0 0;color:var(--ink)}.tkl p{margin:4px 0 8px;font-size:14.5px}.tkl input{width:100%;font:12px ui-monospace,Menlo,monospace;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--chip)}.tkl .btn{width:100%;margin-top:8px}
 .state button{font:inherit;color:var(--accent);background:none;border:0;padding:0;text-decoration:underline;cursor:pointer}
 </style>
 </head>
@@ -202,6 +203,15 @@ textarea.cfg:focus{outline:2px solid #7aa7e8;outline-offset:1px}
           }
         }
       }
+    },
+    &quot;tlist&quot;: {
+      &quot;$tk&quot;: {
+        &quot;.read&quot;: &quot;auth != null &amp;&amp; $tk.length &gt;= 20&quot;,
+        &quot;.write&quot;: &quot;auth != null &amp;&amp; $tk.length &gt;= 20&quot;,
+        &quot;$code&quot;: {
+          &quot;.validate&quot;: &quot;newData.isString() &amp;&amp; newData.val().length === 6&quot;
+        }
+      }
     }
   }
 }</pre><button class="btn sub" type="button" data-copy="rules">규칙 복사하기</button></div>
@@ -249,7 +259,7 @@ textarea.cfg:focus{outline:2px solid #7aa7e8;outline-offset:1px}
 <li>5단계에서 <span class="ui">전시회 만들러 가기 →</span>를 눌러요. 우리반 전시회 첫 화면 아래에 <b>"우리 반 전용 서버 사용 중"</b>이 보이면 제대로 연결된 거예요.</li>
 <li><span class="ui">선생님 · 전시회 만들기</span>로 반, 주제, 작품 사진을 넣고 저장해요.</li>
 <li>저장하면 입장 코드, <b>링크</b>, <b>QR</b>이 나와요. 아이들에게는 <b>링크·QR</b>이나 <b>6자리 코드</b>를 알려 주면 돼요. 링크·QR이 가장 빠르고 확실해요.</li>
-<li>다른 PC나 태블릿에서 전시회를 고치려면, 그 기기에서도 이 페이지 5단계를 한 번 해 주세요. 같은 설정값을 붙여 넣은 뒤 <span class="ui">관리 코드로 불러오기</span>를 써요.</li>
+<li>다른 PC·태블릿·브라우저에서 전시회를 고치려면 <b>선생님 전용 링크</b>로 열어요. 5단계 끝이나 선생님 화면의 <span class="ui">선생님 전용 링크 복사</span>로 받을 수 있어요. 설정값을 다시 붙여 넣을 필요가 없어요.</li>
 </ol>
 </section>
 
@@ -302,6 +312,8 @@ function parse(text) {
   return { apiKey: get("apiKey"), authDomain: get("authDomain"), databaseURL: get("databaseURL"), projectId: get("projectId") };
 }
 function out(kind, htmlText) { const o = $("#out"); o.className = "result on " + kind; o.innerHTML = htmlText; }
+const enc = o => btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+function tk() { let t = ""; try { t = localStorage.getItem("wg_tk") || ""; } catch (_) {} if (!/^[A-Z0-9]{20,40}$/.test(t)) { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", r = new Uint32Array(24); crypto.getRandomValues(r); t = [...r].map(x => A[x % A.length]).join(""); try { localStorage.setItem("wg_tk", t); } catch (_) {} } return t; }
 const timeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("timeout"), { code: "timeout" })), ms))]);
 
 $("#go").onclick = async () => {
@@ -333,7 +345,7 @@ $("#go").onclick = async () => {
         : "<b>로그인을 확인하지 못했어요.</b> (" + esc(code || "알 수 없는 오류") + ")";
       out("bad", "<ul class='checks'>" + steps.map(([t, v]) => `<li class="${v === true ? "y" : v === false ? "n" : ""}">${t}</li>`).join("") + "</ul><p style='margin:10px 0 0'>" + why + "</p>"); return;
     }
-    try { await timeout(app.database().ref("codes/ZZZZZZ").once("value"), 10000); steps[2][1] = true; }
+    try { await timeout(app.database().ref("codes/ZZZZZZ").once("value"), 10000); await timeout(app.database().ref("tlist/" + tk()).once("value"), 10000); steps[2][1] = true; }
     catch (e) {
       steps[2][1] = false;
       const code = (e && (e.code || e.message)) || "";
@@ -342,11 +354,15 @@ $("#go").onclick = async () => {
         : "<b>데이터베이스를 확인하지 못했어요.</b> (" + esc(code) + ")";
       out("bad", "<ul class='checks'>" + steps.map(([t, v]) => `<li class="${v === true ? "y" : v === false ? "n" : ""}">${t}</li>`).join("") + "</ul><p style='margin:10px 0 0'>" + why + "</p>"); return;
     }
-    try { localStorage.setItem(KEY, JSON.stringify({ a: c.apiKey, d: host, p: c.projectId })); localStorage.removeItem("wg_own_off"); } catch (_) {
+    try { localStorage.setItem(KEY, JSON.stringify({ a: c.apiKey, d: host, p: c.projectId })); localStorage.removeItem("wg_own_off"); localStorage.setItem("wg_tk", tk()); } catch (_) {
       out("bad", "<b>이 브라우저에 저장하지 못했어요.</b><br>시크릿 창이라면 일반 창에서 다시 해 주세요."); return;
     }
     paintState();
-    out("good", "<ul class='checks'>" + steps.map(([t]) => `<li class="y">${t}</li>`).join("") + "</ul><p style='margin:10px 0 0'><b>연결됐어요.</b> 이제 이 기기에서 만드는 전시회는 선생님 서버에 저장돼요.</p><a class='btn' href='./'>전시회 만들러 가기 →</a>");
+    const turl = new URL("./", location.href).href + "?db=" + enc({ a: c.apiKey, d: host, p: c.projectId }) + "&tk=" + tk();
+    out("good", "<ul class='checks'>" + steps.map(([t]) => `<li class="y">${t}</li>`).join("") + "</ul><p style='margin:10px 0 0'><b>연결됐어요.</b> 이제 이 기기에서 만드는 전시회는 선생님 서버에 저장돼요.</p>"
+      + "<div class='tkl'><b>🔑 선생님 전용 링크</b><p>이 링크를 <b>즐겨찾기</b>해 두세요. 다른 컴퓨터·브라우저·시크릿 창에서 이 링크로 열면 설정값을 다시 붙여 넣지 않아도 내 전시회가 그대로 열려요. <b>아이들에게는 주지 마세요.</b></p><input id='tkUrl' readonly value='" + esc(turl) + "'><button class='btn sub' type='button' id='tkCopy'>선생님 전용 링크 복사</button></div>"
+      + "<a class='btn' href='" + esc(turl) + "'>전시회 만들러 가기 →</a>");
+    $("#tkCopy").onclick = async () => { const i = $("#tkUrl"); try { await navigator.clipboard.writeText(i.value); } catch (_) { i.select(); document.execCommand("copy"); } $("#tkCopy").textContent = "복사했어요"; setTimeout(() => $("#tkCopy").textContent = "선생님 전용 링크 복사", 1800); };
   } finally {
     btn.disabled = false; btn.textContent = "연결 확인하기";
     if (app) { try { await app.auth().signOut(); } catch (_) {} try { await app.delete(); } catch (_) {} }

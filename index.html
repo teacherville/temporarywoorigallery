@@ -31,7 +31,10 @@ window.FIREBASE_CONFIG = {
   const ok = c => !!c && /^AIza[\w-]{30,}$/.test(c.a || "") && /^[\w.-]+\.(firebaseio\.com|firebasedatabase\.app)$/.test(c.d || "") && /^[a-z0-9-]{4,40}$/.test(c.p || "");
   let own = null, from = "";
   const m = location.search.match(/[?&]db=([A-Za-z0-9_-]+)/);
+  const tkm = location.search.match(/[?&]tk=([A-Z0-9]{20,40})(?:&|$)/);
   if (m) { try { own = dec(m[1]); from = "link"; } catch (_) { own = null; } }
+  // 선생님 전용 링크(?db=…&tk=…): 어느 브라우저·시크릿 창에서 열어도 선생님 모드로 열려요 (저장하지 않아요)
+  if (m && tkm && ok(own)) { from = "saved"; window.WG_TK = tkm[1]; window.WG_TKLINK = true; }
   if (!ok(own)) { own = null; try { own = JSON.parse(localStorage.getItem("wg_own_db") || "null"); from = "saved"; } catch (_) { own = null; }
     // "공용 서버로 돌아가기"는 연결을 지우지 않고 잠시 꺼 두기만 해요. 한 번 눌러 다시 켤 수 있어요
     let off = false; try { off = localStorage.getItem("wg_own_off") === "1"; } catch (_) {}
@@ -39,6 +42,10 @@ window.FIREBASE_CONFIG = {
   if (ok(own) && own.p !== window.WG_SHARED_PID) {
     window.FIREBASE_CONFIG = { apiKey: own.a, authDomain: own.p + ".firebaseapp.com", databaseURL: "https://" + own.d, projectId: own.p };
     window.WG_OWN = from; window.WG_DB = enc({ a: own.a, d: own.d, p: own.p });
+    if (from === "saved" && !window.WG_TK) { // 이 브라우저에 연결해 둔 선생님: 전용 링크용 비밀 값을 하나 만들어 둬요
+      try { let t = localStorage.getItem("wg_tk"); if (!/^[A-Z0-9]{20,40}$/.test(t || "")) { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", r = new Uint32Array(24); crypto.getRandomValues(r); t = [...r].map(x => A[x % A.length]).join(""); localStorage.setItem("wg_tk", t); } window.WG_TK = t; } catch (_) {}
+    }
+    if (window.WG_TK) window.WG_TEACHER_URL = location.origin + location.pathname + "?db=" + window.WG_DB + "&tk=" + window.WG_TK;
   }
   window.WG_ENC = enc; window.WG_OK = ok;
   window.WG_LEAVE_OWN = () => { try { localStorage.setItem("wg_own_off", "1"); } catch (_) {} location.href = location.pathname; };
@@ -386,6 +393,10 @@ input.f::placeholder,textarea.f::placeholder{color:#a9a0ae}
 #tForm .st{display:none}
 #teach[data-view="list"] #tForm,#teach[data-view="list"] .t-bar{display:none}
 #teach[data-view="wiz"] .t-head,#teach[data-view="wiz"] #tMine,#teach[data-view="wiz"] #tLocal{display:none}
+.tkbox{background:#e8f3f1;border:1.5px solid #bfdcd7;border-radius:18px;padding:14px 16px;margin:0 0 16px;font-size:15px;color:#2f2a3d}
+.tkbox[hidden],#teach[data-view="wiz"] .tkbox,#teach[data-view="load"] .tkbox{display:none}
+.tkbox b{color:#1f5f59}.tkbox p{margin:6px 0 10px;line-height:1.55}.tkbox .ic{width:16px;height:16px;vertical-align:-2px}
+.tkbox .btn-main{background:linear-gradient(135deg,#3f9a90,#2a6d67);border:0}.tkbox .tklink{display:block;width:100%;margin-top:10px;font:12px ui-monospace,monospace;padding:8px;border:1px solid #bfdcd7;border-radius:10px}.tkbox .tklink[hidden]{display:none}
 #teach[data-view="list"] #tNewWrap{display:block}
 #tReset{display:none!important}
 #tNewWrap{display:none;margin:0 0 18px}
@@ -962,6 +973,7 @@ html:not(.touch) #emoBar,html:not(.touch) #camBtns{width:252px}
   <div class="t-wrap">
     <div class="t-head"><h2 id="tHead">우리반 전시회 만들기</h2><button class="btn-sub" type="button" id="tHome">처음으로</button></div>
     <p class="notice" id="tLocal" hidden></p>
+    <div class="tkbox" id="tkBox" hidden></div>
     <div id="tNewWrap"><button class="btn-main big" type="button" id="tNew"><span class="plus" aria-hidden="true">+</span><b>새 전시회 만들기</b><small>반 · 주제 · 사진만 넣으면 끝!</small></button></div>
     <div id="tMine" class="mine" hidden><h3>내 전시회</h3><div id="tShows" class="shows"></div></div>
     <footer class="t-foot"><img class="logo t-logo" src="data:image/png;base64,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" alt="티처빌" width="483" height="121"><small>© 2026 티처빌연수원</small></footer>
@@ -1533,14 +1545,15 @@ const FBM = {
     // a brand-new show first stores its secret key (nobody can read it back; it only lets other devices claim the show)
     if (show && show.key && !show.keyed && (!show.owner || show.owner === this.uid) && !(await FBX.val("codes/" + show.code))) { try { await FBX.ref("keys/" + show.code).set(show.key); } catch (_) {} show.keyed = true; }
     // the show's header first (it says who owns the code), then its works, then the teacher's own list
-    if (show) { await this.retry(() => FBX.ref("codes/" + show.code).set(hd(show))); if (window.WG_OWN && !show.ptr) { const g = await DBPTR.get(show.code); if (!g ? await DBPTR.put(show.code) : g.p === DBPTR.mine().p) show.ptr = 1; } let n = 0;
+    if (show) { await this.retry(() => FBX.ref("codes/" + show.code).set(hd(show))); if (window.WG_OWN && !show.ptr) { const g = await DBPTR.get(show.code); if (!g ? await DBPTR.put(show.code) : g.p === DBPTR.mine().p) show.ptr = 1; }
+      if (window.WG_TK && show.key) { try { await FBX.ref("tlist/" + window.WG_TK + "/" + show.code).set(show.key); } catch (e) { console.warn("tlist", e); } } let n = 0;
       for (const id of dirtyIds) { if (onStep) onStep(++n, dirtyIds.length); await this.retry(() => FBX.ref(`works/${show.code}/${id}`).set(works[id])); }
       for (const id of removedIds) { try { await FBX.ref(`works/${show.code}/${id}`).remove(); } catch (_) {} } }
     for (const x of keep) if (!show || x.id !== show.id) { try { await FBX.ref("codes/" + x.code).set(hd(x)); } catch (_) {} }
     await this.retry(() => FBX.ref("teachers/" + this.uid).set({ shows: keep.map(x => Object.assign(this.head(x), { owner: x.owner || this.uid, key: x.key || "" })), updatedAt: Date.now() }));
   },
   async deleteShow(shows, show) {
-    await this.ready; for (const k of ["works", "claps", "clapn", "notes", "wall", "live", "audio"]) { try { await FBX.ref(k + "/" + show.code).remove(); } catch (_) {} }
+    await this.ready; if (window.WG_TK) { try { await FBX.ref("tlist/" + window.WG_TK + "/" + show.code).remove(); } catch (_) {} } for (const k of ["works", "claps", "clapn", "notes", "wall", "live", "audio"]) { try { await FBX.ref(k + "/" + show.code).remove(); } catch (_) {} }
     try { await FBX.ref("codes/" + show.code).remove(); } catch (_) {} try { await FBX.ref("keys/" + show.code).remove(); } catch (_) {} try { await FBX.ref("claims/" + show.code).remove(); } catch (_) {} try { localStorage.removeItem("mc_seen_" + show.code); } catch (_) {}
     await this.saveShows(shows.filter(x => x.id !== show.id), null, {}, [], []);
   },
@@ -3043,10 +3056,27 @@ async function openTeacher() {
   show(null); $("#teach").dataset.view = "load"; $("#teach").hidden = false; ST.mode = "teach"; $("#tMsg").textContent = "";
   if (DATA.fb) { await DATA.ready; if (!DATA.uid) { try { await FBX.anon(); } catch (e) { console.warn("anon", e); TE.anonErr = e; } } }
   try { TE.shows = await DATA.loadShows(); } catch (e) { console.warn(e); TE.shows = []; }
+  if (window.WG_TK && DATA.fb && DATA.uid) await tkSync();
   teacherGate(); renderMine(); resetForm(); if (TE.shows.length) setView("list"); else { setView(DATA.fb && DATA.uid ? "list" : "wiz"); if (draftLoad()) setView("wiz"); }
 }
+/* 선생님 전용 링크: 선생님 서버의 tlist/{비밀값} = {코드: 관리키}. 어느 브라우저에서 열어도 이 목록으로 전시회를 불러와요 */
+async function tkSync() {
+  const tk = window.WG_TK; let m = {}, changed = false; TE.tkErr = null;
+  try { m = (await FBX.val("tlist/" + tk)) || {}; } catch (e) { console.warn("tlist", e); TE.tkErr = e; return; }
+  for (const code of Object.keys(m)) { if (TE.shows.some(x => x.code === code)) continue;
+    try { const s = await FBX.claim(code + m[code]); s.id = s.id || "e" + Date.now().toString(36) + code; TE.shows.push(s); changed = true; }
+    catch (e) { if (e && e.code === "missing") { try { await FBX.ref("tlist/" + tk + "/" + code).remove(); } catch (_) {} } } }
+  for (const s of TE.shows) if (s.key && m[s.code] !== s.key) { try { await FBX.ref("tlist/" + tk + "/" + s.code).set(s.key); } catch (_) {} }
+  if (changed) { try { await DATA.saveShows(TE.shows, null, {}, [], []); } catch (e) { console.warn(e); } }
+}
+function tkBox() {
+  const box = $("#tkBox"); if (!box) return; box.hidden = !window.WG_TEACHER_URL || !DATA.fb; if (box.hidden) return;
+  if (TE.tkErr) { box.innerHTML = `<b>선생님 전용 링크를 쓰려면 규칙을 다시 게시해 주세요</b><p>선생님 파이어베이스의 규칙이 예전 것이에요. 안내 페이지 2단계의 규칙을 다시 붙여 넣고 게시해 주세요.</p><a class="btn-sub slim" href="guide.html#rules">안내 페이지 열기</a>`; return; }
+  box.innerHTML = `<b>${ic("lock")} 선생님 전용 링크</b><p>이 링크를 <b>즐겨찾기</b>해 두면 다른 컴퓨터·브라우저·시크릿 창에서도 내 전시회를 그대로 열고 고칠 수 있어요. <b>아이들에게는 주지 마세요.</b></p><button class="btn-main slim" type="button" id="tkCopy">선생님 전용 링크 복사</button><input class="tklink" id="tkLink" readonly hidden>`;
+  $("#tkCopy").onclick = async () => { try { await navigator.clipboard.writeText(window.WG_TEACHER_URL); toast("선생님 전용 링크를 복사했어요. 즐겨찾기나 메모에 붙여 넣어 두세요", 3600); } catch (_) { const i = $("#tkLink"); i.hidden = false; i.value = window.WG_TEACHER_URL; i.focus(); i.select(); toast("링크를 길게 눌러 복사해 주세요", 3200); } };
+}
 // on the github copy the teacher signs in with google to make and keep shows; children never need to
-function teacherGate() {
+function teacherGate() { tkBox();
   const n = $("#tLocal"); n.textContent = ""; n.hidden = true; n.classList.remove("plain");
   // online copy that could not reach the database: say so plainly instead of quietly saving only on this device
   if (ONLINE_WANTED() && (!DATA.fb || !DATA.uid)) { const why = !DATA.fb ? "인터넷 저장소에 연결되지 않았어요." : "인터넷 저장소에 들어가지 못했어요. 파이어베이스에서 익명 로그인이 켜져 있는지 확인해 주세요.";
@@ -3406,7 +3436,7 @@ async function boot() {
   ST.nick = DATA.L("nick") || ""; const lk = DATA.L("look"); if (lk) ST.look = normLook(lk);
   STUDENTS = []; buildExterior(); ST.scene = EXT.scene; ST.mode = "intro";
   $("#loading").classList.add("hide"); requestAnimationFrame(loop); introPlay();
-  hashJoin();
+  hashJoin(); if (window.WG_TKLINK && !location.hash) setTimeout(openTeacher, 300);
 }
 const fontsReady = loadFonts(KO_TEXT);
 fontsReady.catch(() => {}).then(() => boot().catch(e => { console.error(e); $("#loading").innerHTML = "<div>전시관을 여는 중에 문제가 생겼어요. 새로고침해 주세요.</div>"; }));
