@@ -2072,7 +2072,7 @@ async function joinLive(code) {
     const up = c => { const v = c.val() || {}; if (v.p && v.i) { rows.set(c.key, { peer: c.key, isMe: c.key === id, presence: Object.assign({}, v.p, v.i) }); push(); } };
     const q = base.limitToFirst(LIVE_MAX); // only the first LIVE_MAX friends are shown, so a big class doesn't multiply the download
     const hA = q.on("child_added", up, e => console.warn("live", e)), hC = q.on("child_changed", up), hR = q.on("child_removed", c => { rows.delete(c.key); push(); });
-    RM = { presence: p => { const i = JSON.stringify({ n: p.n, l: p.l }); const w = { p: { x: p.x, z: p.z, r: p.r, s: p.s || 0, e: p.e || "" } }; if (i !== sentI) { sentI = i; w.i = { n: p.n, l: p.l }; return me.update(w); } return me.child("p").set(w.p); },
+    RM = { presence: p => { const i = JSON.stringify({ n: p.n, l: p.l }); const w = { p: { x: p.x, z: p.z, r: p.r, vx: p.vx || 0, vz: p.vz || 0, s: p.s || 0, e: p.e || "" } }; if (i !== sentI) { sentI = i; w.i = { n: p.n, l: p.l }; return me.update(w); } return me.child("p").set(w.p); },
       leave: () => { try { q.off("child_added", hA); q.off("child_changed", hC); q.off("child_removed", hR); me.onDisconnect().cancel(); me.remove(); } catch (_) {} } };
     sendPresence(true);
   } catch (e) { console.warn("live off", e); RM = null; } return; }
@@ -2085,9 +2085,15 @@ function dropAv(av) { mus.remove(av); try { av.traverse(o => { if (o.geometry) o
 function leaveLive() { if (RM) { try { RM.leave(); } catch (_) {} } RM = null; PEERS.forEach(o => dropAv(o.av)); PEERS.clear(); }
 const SEND_MS = 2000; // firebase: send my position at most every 2s (was 380ms) to save Spark-plan download
 let lastPres = ""; // skip identical updates: a child standing still costs nothing (Spark plan bandwidth)
-function sendPresence(force) { if (!RM || !player) return; const now = performance.now(); if (!force && now - lastSent < (DATA.fb ? SEND_MS : 120)) return;
-  const p = { x: +player.position.x.toFixed(1), z: +player.position.z.toFixed(1), r: +player.rotation.y.toFixed(1), s: ST.sit ? ST.sit.y : 0, e: ST.emote || "", n: ST.nick || "친구", l: ST.look }, k = JSON.stringify(p);
-  if (!force && k === lastPres) return; lastSent = now; lastPres = k; RM.presence(p).catch(() => {}); }
+let lastV = { x: 0, z: 0 };
+function sendPresence(force) { if (!RM || !player) return; const now = performance.now(), gap = now - lastSent;
+  const walk = !ST.sit && Math.hypot(ST.rvx || 0, ST.rvz || 0) > .3, vx = walk ? +(ST.rvx || 0).toFixed(1) : 0, vz = walk ? +(ST.rvz || 0).toFixed(1) : 0;
+  // friends guess where I'm going from my speed, so I only have to speak up when that guess goes wrong: start, stop, turn, or every SEND_MS
+  const s0 = Math.hypot(lastV.x, lastV.z), s1 = Math.hypot(vx, vz), turned = s0 > 0 && s1 > 0 && (lastV.x * vx + lastV.z * vz) / (s0 * s1) < .77, sped = s0 > 0 && s1 > 0 && Math.abs(s1 - s0) > s0 * .4;
+  const urgent = (s0 === 0) !== (s1 === 0) || turned || sped;
+  if (!force && gap < (DATA.fb ? (urgent ? 450 : SEND_MS) : 120)) return;
+  const p = { x: +player.position.x.toFixed(1), z: +player.position.z.toFixed(1), r: +player.rotation.y.toFixed(1), vx, vz, s: ST.sit ? ST.sit.y : 0, e: ST.emote || "", n: ST.nick || "친구", l: ST.look }, k = JSON.stringify(p);
+  if (!force && k === lastPres) return; lastSent = now; lastPres = k; lastV = { x: vx, z: vz }; RM.presence(p).catch(() => {}); }
 /* ---- gestures: a wave, a heart or a clap above your head, seen by everyone in the room ---- */
 const EMO = { wave: "👋", heart: "❤️", clap: "👏" }, EMO_T = {}, FLOATS = [];
 function emoTex(k) { if (EMO_T[k]) return EMO_T[k]; const [c, x] = cv(128, 128); x.font = "92px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(EMO[k] || "✨", 64, 70); return (EMO_T[k] = tex(c)); }
@@ -2102,7 +2108,7 @@ function syncPeers(list) {
   const seen = new Set();
   list.forEach(p => { if (p.isMe || p.sameTab) return; const pr = p.presence || {}; if (typeof pr.x !== "number" || typeof pr.z !== "number") return; let o = PEERS.get(p.peer);
     if (!o) { const av = makeKid(String(pr.n || "친구").replace(/[\u0000-\u001f]/g, "").slice(0, 6) || "친구", normLook(pr.l), false); av.position.set(pr.x, 0, pr.z); if (COARSE) av.traverse(m => { m.castShadow = false; }); mus.add(av); o = { av, tx: pr.x, tz: pr.z, r: 0 }; PEERS.set(p.peer, o); }
-    o.tx = +pr.x; o.tz = +pr.z; o.r = +pr.r || 0; o.sit = clamp(+pr.s || 0, 0, 1); seen.add(p.peer);
+    o.tx = +pr.x; o.tz = +pr.z; o.r = +pr.r || 0; o.vx = clamp(+pr.vx || 0, -8, 8); o.vz = clamp(+pr.vz || 0, -8, 8); o.t0 = performance.now(); o.sit = clamp(+pr.s || 0, 0, 1); seen.add(p.peer);
     const e = String(pr.e || ""); if (e && e !== o.e) { if (o.e !== undefined) showEmote(o.av, e.split(":")[0]); } o.e = e; });
   [...PEERS.keys()].forEach(k => { if (!seen.has(k)) { dropAv(PEERS.get(k).av); PEERS.delete(k); } });
 }
@@ -3299,21 +3305,21 @@ function tick(dt, time) {
   } else if (sp > .02) {
     const ox = player.position.x, oz = player.position.z;
     player.position.x += ST.vx * dt; player.position.z += ST.vz * dt; collide(player.position); player.position.y = groundY(player.position.x, player.position.z);
-    const real = Math.hypot(player.position.x - ox, player.position.z - oz) / Math.max(dt, 1e-4);
+    const real = Math.hypot(player.position.x - ox, player.position.z - oz) / Math.max(dt, 1e-4); ST.rvx = lerp(ST.rvx || 0, (player.position.x - ox) / Math.max(dt, 1e-4), .3); ST.rvz = lerp(ST.rvz || 0, (player.position.z - oz) / Math.max(dt, 1e-4), .3);
     if (ST.goal) { const g0 = ST.goal, gd = Math.hypot(g0.x - player.position.x, g0.z - player.position.z); if (g0.best == null || gd < g0.best - .1) { g0.best = gd; g0.bt = 0; } else g0.bt += dt;
       g0.stuck = real < sp * .3 || g0.bt > 1.4 ? g0.stuck + dt : 0; if (g0.bt > 1.4) g0.bt = 0; if (ST.goal.stuck > .35 && (ST.goal.tries || 0) < 4) { const g = ST.goal; g.tries = (g.tries || 0) + 1; g.side = g.tries % 2 ? 1 : -1; g.det = .25 + g.tries * .2; g.stuck = 0; }
       if (ST.goal && ST.goal.stuck > .5) { const g = ST.goal; clearGoal(); if (g.soft && g.done && Math.hypot(g.x - player.position.x, g.z - player.position.z) < g.soft) g.done(); } }
     if (sp > .3) player.rotation.y += angDiff(Math.atan2(ST.vx, ST.vz), player.rotation.y) * ez(12);
     sendPresence();
     if (moving) { ST.stepT = (ST.stepT || 0) + dt * sp; if (ST.stepT > 1.05) { ST.stepT = 0; tone(150 + Math.random() * 40, .05, .01, "triangle"); } }
-  } else { ST.vx = ST.vz = 0; sendPresence(); }
+  } else { ST.vx = ST.vz = 0; ST.rvx = ST.rvz = 0; sendPresence(); }
   if (G.goalMk && G.goalMk.visible) { G.goalMk.scale.setScalar(lerp(G.goalMk.scale.x, 1, ez(8))); G.goalMk.material.opacity = .55 + .3 * Math.sin(time * 6); }
   if (CAM.turn) { const st = CAM.turn * ez(7); CAM.yaw += st; CAM.turn -= st; if (Math.abs(CAM.turn) < .002) CAM.turn = 0; }
   player.userData.sit = ST.sit ? ST.sit.y : 0; animAvatar(player, dt, time, moving && !ST.sit, 0);
   if (player.userData.tag) player.userData.tag.visible = camera.position.distanceTo(player.position) > 2.6;
   floatsTick(dt);
   PEERS.forEach(o => { const tg = o.av.userData.tag; if (tg) { const dd = camera.position.distanceTo(o.av.position); tg.material.opacity = clamp(1 - (dd - 9) / 9, .12, 1); } });
-  PEERS.forEach(o => { const a = o.av, dx = o.tx - a.position.x, dz = o.tz - a.position.z, d = Math.hypot(dx, dz); const gl = Math.min(1, dt * (DATA.fb ? 1.4 : 8)); a.position.x += dx * gl; a.position.z += dz * gl; a.position.y = groundY(a.position.x, a.position.z); a.rotation.y += angDiff(o.r, a.rotation.y) * Math.min(1, dt * 10); a.userData.sit = o.sit || 0; animAvatar(a, dt, time, d > .05, 0); });
+  PEERS.forEach(o => { const a = o.av, ag = o.vx || o.vz ? Math.min(SEND_MS * 1.3, performance.now() - (o.t0 || 0)) / 1000 : 0, px = o.tx + (o.vx || 0) * ag, pz = o.tz + (o.vz || 0) * ag, dx = px - a.position.x, dz = pz - a.position.z, d = Math.hypot(dx, dz); const gl = Math.min(1, dt * (DATA.fb ? 6 : 8)); a.position.x += dx * gl; a.position.z += dz * gl; a.position.y = groundY(a.position.x, a.position.z); a.rotation.y += angDiff(o.vx || o.vz ? Math.atan2(o.vx, o.vz) : o.r, a.rotation.y) * Math.min(1, dt * 10); a.userData.sit = o.sit || 0; animAvatar(a, dt, time, d > .05, 0); });
   G.npcs.forEach(n => { const a = n.av; if (n.still) { animAvatar(a, dt, time, false, 0); return; }
     if (n.wait > 0) { n.wait -= dt; a.rotation.y += angDiff(Math.atan2(-n.s.art.n.x, -n.s.art.n.z), a.rotation.y) * Math.min(1, dt * 4); animAvatar(a, dt, time, false, -.05); if (n.wait <= 0) { n.s = STUDENTS[Math.floor(Math.random() * STUDENTS.length)]; n.tgt = frontOf(n.s, 1.5 + Math.random() * .5); } return; }
     const dx = n.tgt.x - a.position.x, dz = n.tgt.z - a.position.z, d = Math.hypot(dx, dz); if (d < .2) { n.wait = 4 + Math.random() * 5; animAvatar(a, dt, time, false, 0); return; }
