@@ -2055,17 +2055,25 @@ function openMsg() { $("#msgText").value = ""; $("#msgErr").textContent = ""; $(
 $("#msgForm").addEventListener("submit", async e => { e.preventDefault(); const t = $("#msgText").value.trim().slice(0, 50); if (!t) { $("#msgErr").textContent = "한마디를 적어 주세요"; return; } if (badText(t)) { $("#msgErr").textContent = "친구가 기분 좋아지는 말로 바꿔 볼까요?"; return; } const wait = postCheck(); if (wait) { $("#msgErr").textContent = wait; return; } try { const row = { nick: ST.nick || "친구", text: t }; const all = await DATA.add("wall", ROOM.code, row); if (all) applyWall(all); $("#msgSheet").hidden = true; ST.my.msgs++; postDone(); toast("메시지 월에 쪽지를 붙였어요"); tone(990, .2, .05); } catch (_) { $("#msgErr").textContent = "붙이지 못했어요. 잠시 뒤에 다시 해 주세요"; } });
 /* ================= friends walking together ================= */
 const PEERS = new Map(); let RM = null, lastSent = 0;
+/* ---- save download: pause friends-walking when the tab is hidden or nobody touches it for a while, resume on return ---- */
+const LIVE_MAX = 10, LIVE_IDLE_MS = 120000; let LIVE_WANT = null, LIVE_PAUSED = false, liveAct = Date.now();
+function livePause() { if (!LIVE_WANT || LIVE_PAUSED || !DATA.fb) return; LIVE_PAUSED = true; const w = LIVE_WANT; leaveLive(); LIVE_WANT = w; LIVE_PAUSED = true; }
+function liveResume() { liveAct = Date.now(); if (!LIVE_PAUSED || !LIVE_WANT || document.hidden) return; if (!ROOM || ROOM.code !== LIVE_WANT) { LIVE_WANT = null; LIVE_PAUSED = false; return; } joinLive(LIVE_WANT); }
+document.addEventListener("visibilitychange", () => { if (document.hidden) livePause(); else liveResume(); });
+["pointerdown", "keydown", "wheel", "touchstart"].forEach(ev => addEventListener(ev, liveResume, { passive: true, capture: true }));
+setInterval(() => { if (RM && LIVE_WANT && Date.now() - liveAct > LIVE_IDLE_MS) livePause(); }, 10000);
 async function joinLive(code) {
-  leaveLive();
+  leaveLive(); LIVE_WANT = code; LIVE_PAUSED = false; liveAct = Date.now();
   if (DATA.fb) { try { await DATA.ready; if (!ROOM || ROOM.code !== code) return;
     const base = FBX.ref("live/" + code), id = "p" + Math.random().toString(36).slice(2, 10), me = base.child(id); me.onDisconnect().remove();
     let sentI = "";
     // listen per child, so one friend moving sends only that friend's position, not the whole room
     const rows = new Map(), push = () => syncPeers([...rows.values()]);
     const up = c => { const v = c.val() || {}; if (v.p && v.i) { rows.set(c.key, { peer: c.key, isMe: c.key === id, presence: Object.assign({}, v.p, v.i) }); push(); } };
-    const hA = base.on("child_added", up, e => console.warn("live", e)), hC = base.on("child_changed", up), hR = base.on("child_removed", c => { rows.delete(c.key); push(); });
+    const q = base.limitToFirst(LIVE_MAX); // only the first LIVE_MAX friends are shown, so a big class doesn't multiply the download
+    const hA = q.on("child_added", up, e => console.warn("live", e)), hC = q.on("child_changed", up), hR = q.on("child_removed", c => { rows.delete(c.key); push(); });
     RM = { presence: p => { const i = JSON.stringify({ n: p.n, l: p.l }); const w = { p: { x: p.x, z: p.z, r: p.r, s: p.s || 0, e: p.e || "" } }; if (i !== sentI) { sentI = i; w.i = { n: p.n, l: p.l }; return me.update(w); } return me.child("p").set(w.p); },
-      leave: () => { try { base.off("child_added", hA); base.off("child_changed", hC); base.off("child_removed", hR); me.onDisconnect().cancel(); me.remove(); } catch (_) {} } };
+      leave: () => { try { q.off("child_added", hA); q.off("child_changed", hC); q.off("child_removed", hR); me.onDisconnect().cancel(); me.remove(); } catch (_) {} } };
     sendPresence(true);
   } catch (e) { console.warn("live off", e); RM = null; } return; }
   try { const room = window.claude && window.claude.use ? await window.claude.use("room") : null; if (!room || !ROOM || ROOM.code !== code) return;
@@ -2075,7 +2083,7 @@ async function joinLive(code) {
 // free a departed friend's avatar from GPU memory (shared textures in TX are kept)
 function dropAv(av) { mus.remove(av); try { av.traverse(o => { if (o.geometry) o.geometry.dispose(); [].concat(o.material || []).forEach(m => { if (m.map && !Object.values(TX).includes(m.map)) m.map.dispose(); m.dispose(); }); }); } catch (_) {} }
 function leaveLive() { if (RM) { try { RM.leave(); } catch (_) {} } RM = null; PEERS.forEach(o => dropAv(o.av)); PEERS.clear(); }
-const SEND_MS = 1000; // firebase: send my position at most once a second (was 380ms) to save Spark-plan download
+const SEND_MS = 2000; // firebase: send my position at most every 2s (was 380ms) to save Spark-plan download
 let lastPres = ""; // skip identical updates: a child standing still costs nothing (Spark plan bandwidth)
 function sendPresence(force) { if (!RM || !player) return; const now = performance.now(); if (!force && now - lastSent < (DATA.fb ? SEND_MS : 120)) return;
   const p = { x: +player.position.x.toFixed(1), z: +player.position.z.toFixed(1), r: +player.rotation.y.toFixed(1), s: ST.sit ? ST.sit.y : 0, e: ST.emote || "", n: ST.nick || "친구", l: ST.look }, k = JSON.stringify(p);
@@ -2986,7 +2994,7 @@ function openFpTip() { if (ST.mode !== "walk" || ST.fp || modalOpen()) return; g
   $("#gText").textContent = "아래 ‘1인칭’ 버튼을 누르면 내 눈으로 보듯 그림이 크게 보여요"; $("#gDots").hidden = true; $("#gNext").textContent = "1인칭으로 보기"; $("#gSkip").textContent = "괜찮아요"; $("#gSkip").hidden = false; $("#guide").hidden = false; setTimeout(() => $("#gNext").focus(), 50); }
 $("#gNext").onclick = () => { if (gTip) { closeGuide(); if (!ST.fp) $("#camFp").click(); return; } if (gStep < GUIDE.length - 1) { gStep++; guideShow(); } else closeGuide(); };
 $("#gSkip").onclick = closeGuide;
-function leaveMuseum() { artCap(null); clearGoal(); ST.cine = null; ST.sit = null; ST.focusArt = null; if (player) player.visible = true; $("#camBtns").hidden = true; $("#hudTk").hidden = true; stopVO(); musicOff(); leaveLive(); DATA.stop(); $("#hud").hidden = true; setAct("none", ""); document.querySelectorAll(".sheet").forEach(s => (s.hidden = true)); ST.mode = "intro"; ST.scene = EXT.scene; show("intro"); }
+function leaveMuseum() { artCap(null); clearGoal(); ST.cine = null; ST.sit = null; ST.focusArt = null; if (player) player.visible = true; $("#camBtns").hidden = true; $("#hudTk").hidden = true; stopVO(); musicOff(); leaveLive(); LIVE_WANT = null; LIVE_PAUSED = false; DATA.stop(); $("#hud").hidden = true; setAct("none", ""); document.querySelectorAll(".sheet").forEach(s => (s.hidden = true)); ST.mode = "intro"; ST.scene = EXT.scene; show("intro"); }
 $("#btnOut").onclick = () => confirmBox("관람을 마치고 나갈까요?", "관람 마치기", finishVisit, "계속 볼게요");
 document.querySelectorAll("[data-home]").forEach(b => b.addEventListener("click", () => { show("intro"); ST.mode = "intro"; }));
 $("#goKid").onclick = () => { show("join"); $("#jMsg").textContent = ""; setTimeout(() => $("#jCode").focus(), 50); try { ac().resume(); } catch (_) {} };
@@ -3305,7 +3313,7 @@ function tick(dt, time) {
   if (player.userData.tag) player.userData.tag.visible = camera.position.distanceTo(player.position) > 2.6;
   floatsTick(dt);
   PEERS.forEach(o => { const tg = o.av.userData.tag; if (tg) { const dd = camera.position.distanceTo(o.av.position); tg.material.opacity = clamp(1 - (dd - 9) / 9, .12, 1); } });
-  PEERS.forEach(o => { const a = o.av, dx = o.tx - a.position.x, dz = o.tz - a.position.z, d = Math.hypot(dx, dz); const gl = Math.min(1, dt * (DATA.fb ? 2.4 : 8)); a.position.x += dx * gl; a.position.z += dz * gl; a.position.y = groundY(a.position.x, a.position.z); a.rotation.y += angDiff(o.r, a.rotation.y) * Math.min(1, dt * 10); a.userData.sit = o.sit || 0; animAvatar(a, dt, time, d > .05, 0); });
+  PEERS.forEach(o => { const a = o.av, dx = o.tx - a.position.x, dz = o.tz - a.position.z, d = Math.hypot(dx, dz); const gl = Math.min(1, dt * (DATA.fb ? 1.4 : 8)); a.position.x += dx * gl; a.position.z += dz * gl; a.position.y = groundY(a.position.x, a.position.z); a.rotation.y += angDiff(o.r, a.rotation.y) * Math.min(1, dt * 10); a.userData.sit = o.sit || 0; animAvatar(a, dt, time, d > .05, 0); });
   G.npcs.forEach(n => { const a = n.av; if (n.still) { animAvatar(a, dt, time, false, 0); return; }
     if (n.wait > 0) { n.wait -= dt; a.rotation.y += angDiff(Math.atan2(-n.s.art.n.x, -n.s.art.n.z), a.rotation.y) * Math.min(1, dt * 4); animAvatar(a, dt, time, false, -.05); if (n.wait <= 0) { n.s = STUDENTS[Math.floor(Math.random() * STUDENTS.length)]; n.tgt = frontOf(n.s, 1.5 + Math.random() * .5); } return; }
     const dx = n.tgt.x - a.position.x, dz = n.tgt.z - a.position.z, d = Math.hypot(dx, dz); if (d < .2) { n.wait = 4 + Math.random() * 5; animAvatar(a, dt, time, false, 0); return; }
