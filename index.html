@@ -908,7 +908,7 @@ html:not(.touch) #emoBar,html:not(.touch) #camBtns{width:252px}
         <li>이름, 연락처 같은 개인정보는 받지 않아요. 작품과 입장할 때는 <b>번호나 별명</b>을 적어 주세요.</li>
         <li>아이 실명이나 얼굴이 보이는 사진은 올리지 말아 주세요.</li>
         <li>저장되는 내용: 반 이름, 전시 주제, 작품 사진, 번호·별명, 쪽지·방명록</li>
-        <li id="ntWhere">저장 위치: Google Firebase (싱가포르)</li>
+        <li id="ntWhere">저장 위치: Google Firebase 공식 데이터 센터(싱가포르)</li>
         <li>다 쓴 전시회는 내 전시회 목록의 <b>⋯ → 지우기</b>를 누르면 작품과 글이 모두 지워져요. <b>전시 닫기</b>는 입장만 막아요.</li>
         <li id="ntDel">개인정보가 담겼거나 부적절한 작품·글은 운영자가 지울 수 있어요.</li>
       </ul>
@@ -985,7 +985,7 @@ html:not(.touch) #emoBar,html:not(.touch) #camBtns{width:252px}
           <label class="lab full">입구 소개 글<textarea class="f" id="tIntro" maxlength="300" rows="3"></textarea></label>
           <label class="lab full">마무리 글<textarea class="f" id="tOutro" maxlength="200" rows="3"></textarea></label>
         </div></details></div>
-      <div class="st st3"><div class="qEmoji"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg></div><h2 class="qTitle">어떤 작품을 전시할까요?</h2><div class="pnote" role="note"><b>사진 올리기 전에 꼭 확인해 주세요</b><ul><li>개인정보는 받지 않아요. 작품에는 <em>번호나 별명</em>을 적어 주세요.</li><li>아이 얼굴이나 이름표가 보이는 사진은 올리지 말아 주세요.</li><li class="pn-where">작품과 글은 Google Firebase(싱가포르)에 저장돼요.</li><li class="pn-del">개인정보가 담겼거나 부적절한 작품은 운영자가 지울 수 있어요.</li></ul></div><div class="upload">
+      <div class="st st3"><div class="qEmoji"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg></div><h2 class="qTitle">어떤 작품을 전시할까요?</h2><div class="pnote" role="note"><b>사진 올리기 전에 꼭 확인해 주세요</b><ul><li>개인정보는 받지 않아요. 작품에는 <em>번호나 별명</em>을 적어 주세요.</li><li>아이 얼굴이나 이름표가 보이는 사진은 올리지 말아 주세요.</li><li class="pn-where">작품과 글은 Google Firebase 공식 데이터 센터(싱가포르)에 저장됩니다.</li><li class="pn-del">개인정보가 담겼거나 부적절한 작품은 운영자가 지울 수 있어요.</li></ul></div><div class="upload">
         <label class="btn-main big" for="tBulk" tabindex="0" id="tBulkL">작품 사진 올리기</label><input type="file" id="tBulk" accept="image/*" multiple hidden>
       </div>
       <div id="tList" class="cards"></div></div>
@@ -2075,9 +2075,10 @@ async function joinLive(code) {
 // free a departed friend's avatar from GPU memory (shared textures in TX are kept)
 function dropAv(av) { mus.remove(av); try { av.traverse(o => { if (o.geometry) o.geometry.dispose(); [].concat(o.material || []).forEach(m => { if (m.map && !Object.values(TX).includes(m.map)) m.map.dispose(); m.dispose(); }); }); } catch (_) {} }
 function leaveLive() { if (RM) { try { RM.leave(); } catch (_) {} } RM = null; PEERS.forEach(o => dropAv(o.av)); PEERS.clear(); }
+const SEND_MS = 1000; // firebase: send my position at most once a second (was 380ms) to save Spark-plan download
 let lastPres = ""; // skip identical updates: a child standing still costs nothing (Spark plan bandwidth)
-function sendPresence(force) { if (!RM || !player) return; const now = performance.now(); if (!force && now - lastSent < (DATA.fb ? 380 : 120)) return;
-  const p = { x: +player.position.x.toFixed(2), z: +player.position.z.toFixed(2), r: +player.rotation.y.toFixed(2), s: ST.sit ? ST.sit.y : 0, e: ST.emote || "", n: ST.nick || "친구", l: ST.look }, k = JSON.stringify(p);
+function sendPresence(force) { if (!RM || !player) return; const now = performance.now(); if (!force && now - lastSent < (DATA.fb ? SEND_MS : 120)) return;
+  const p = { x: +player.position.x.toFixed(1), z: +player.position.z.toFixed(1), r: +player.rotation.y.toFixed(1), s: ST.sit ? ST.sit.y : 0, e: ST.emote || "", n: ST.nick || "친구", l: ST.look }, k = JSON.stringify(p);
   if (!force && k === lastPres) return; lastSent = now; lastPres = k; RM.presence(p).catch(() => {}); }
 /* ---- gestures: a wave, a heart or a clap above your head, seen by everyone in the room ---- */
 const EMO = { wave: "👋", heart: "❤️", clap: "👏" }, EMO_T = {}, FLOATS = [];
@@ -3297,14 +3298,14 @@ function tick(dt, time) {
     if (sp > .3) player.rotation.y += angDiff(Math.atan2(ST.vx, ST.vz), player.rotation.y) * ez(12);
     sendPresence();
     if (moving) { ST.stepT = (ST.stepT || 0) + dt * sp; if (ST.stepT > 1.05) { ST.stepT = 0; tone(150 + Math.random() * 40, .05, .01, "triangle"); } }
-  } else { ST.vx = ST.vz = 0; }
+  } else { ST.vx = ST.vz = 0; sendPresence(); }
   if (G.goalMk && G.goalMk.visible) { G.goalMk.scale.setScalar(lerp(G.goalMk.scale.x, 1, ez(8))); G.goalMk.material.opacity = .55 + .3 * Math.sin(time * 6); }
   if (CAM.turn) { const st = CAM.turn * ez(7); CAM.yaw += st; CAM.turn -= st; if (Math.abs(CAM.turn) < .002) CAM.turn = 0; }
   player.userData.sit = ST.sit ? ST.sit.y : 0; animAvatar(player, dt, time, moving && !ST.sit, 0);
   if (player.userData.tag) player.userData.tag.visible = camera.position.distanceTo(player.position) > 2.6;
   floatsTick(dt);
   PEERS.forEach(o => { const tg = o.av.userData.tag; if (tg) { const dd = camera.position.distanceTo(o.av.position); tg.material.opacity = clamp(1 - (dd - 9) / 9, .12, 1); } });
-  PEERS.forEach(o => { const a = o.av, dx = o.tx - a.position.x, dz = o.tz - a.position.z, d = Math.hypot(dx, dz); const gl = Math.min(1, dt * (DATA.fb ? 5 : 8)); a.position.x += dx * gl; a.position.z += dz * gl; a.position.y = groundY(a.position.x, a.position.z); a.rotation.y += angDiff(o.r, a.rotation.y) * Math.min(1, dt * 10); a.userData.sit = o.sit || 0; animAvatar(a, dt, time, d > .05, 0); });
+  PEERS.forEach(o => { const a = o.av, dx = o.tx - a.position.x, dz = o.tz - a.position.z, d = Math.hypot(dx, dz); const gl = Math.min(1, dt * (DATA.fb ? 2.4 : 8)); a.position.x += dx * gl; a.position.z += dz * gl; a.position.y = groundY(a.position.x, a.position.z); a.rotation.y += angDiff(o.r, a.rotation.y) * Math.min(1, dt * 10); a.userData.sit = o.sit || 0; animAvatar(a, dt, time, d > .05, 0); });
   G.npcs.forEach(n => { const a = n.av; if (n.still) { animAvatar(a, dt, time, false, 0); return; }
     if (n.wait > 0) { n.wait -= dt; a.rotation.y += angDiff(Math.atan2(-n.s.art.n.x, -n.s.art.n.z), a.rotation.y) * Math.min(1, dt * 4); animAvatar(a, dt, time, false, -.05); if (n.wait <= 0) { n.s = STUDENTS[Math.floor(Math.random() * STUDENTS.length)]; n.tgt = frontOf(n.s, 1.5 + Math.random() * .5); } return; }
     const dx = n.tgt.x - a.position.x, dz = n.tgt.z - a.position.z, d = Math.hypot(dx, dz); if (d < .2) { n.wait = 4 + Math.random() * 5; animAvatar(a, dt, time, false, 0); return; }
