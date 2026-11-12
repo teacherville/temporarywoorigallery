@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>우리반 전시회 · 운영자</title>
+<style>
+:root{--ink:#2f2a3d;--sub:#6b6378;--paper:#fffdf9;--line:#e6dfd4;--bg:#efe9df;--chip:#f4efe7;--accent:#c8553d;--ok:#2f8a5a;--font:'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:24px;margin:0 0 6px}
+.sub{color:var(--sub);margin:0 0 18px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px;margin:0 0 14px}
+input,select{font:inherit;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+button{font:inherit;font-weight:700;padding:8px 14px;border-radius:10px;border:0;background:var(--ink);color:#fff;cursor:pointer}
+button.s{background:var(--chip);color:var(--ink)}
+button.d{background:#fdecea;color:#8a2c1d}
+button:disabled{opacity:.5}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.stats div{background:var(--chip);border-radius:12px;padding:8px 14px}
+.stats b{font-size:18px;display:block}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--sub);font-weight:600}
+td .acts{display:flex;gap:4px;flex-wrap:wrap}
+td .acts button{padding:4px 9px;font-size:13px}
+.tag{font-size:12px;border-radius:6px;padding:1px 6px;background:var(--chip)}
+.tag.on{background:#e7f5ec;color:var(--ok)}
+.old{color:#a35a00}
+#view{display:none}
+.works{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin:10px 0}
+.works figure{margin:0;background:var(--chip);border-radius:10px;padding:6px;font-size:12.5px}
+.works img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;display:block;background:#ddd}
+.notes li{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding:5px 0}
+.notes{list-style:none;padding:0;margin:6px 0}
+.msg{margin:8px 0 0;color:var(--sub)}
+.bad{color:#8a2c1d}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>운영자 페이지</h1>
+<p class="sub">전체 전시회를 보고, 문제 있는 작품·글·전시회를 지워요. 운영자 키는 클라우드플레어에 정해 둔 <code>ADMIN_KEY</code>예요. 이 주소와 키는 다른 사람에게 알려 주지 마세요.</p>
+
+<div class="card" id="login">
+  <div class="row"><input id="key" type="password" placeholder="운영자 키" size="32" autocomplete="off"><button id="go">들어가기</button></div>
+  <p class="msg" id="lmsg"></p>
+</div>
+
+<div id="main" hidden>
+  <div class="stats" id="stats"></div>
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <input id="q" placeholder="코드·반 이름·주제로 찾기" size="26">
+      <select id="sort"><option value="updated">최근에 고친 순</option><option value="old">오래 안 쓴 순</option><option value="created">새로 만든 순</option><option value="works">작품 많은 순</option></select>
+      <button class="s" id="reload">새로고침</button>
+    </div>
+    <table><thead><tr><th>코드</th><th>전시회</th><th>작품</th><th>상태</th><th>만든 날</th><th>마지막으로 고친 날</th><th></th></tr></thead><tbody id="tb"></tbody></table>
+  </div>
+  <div class="card" id="view">
+    <div class="row" style="justify-content:space-between"><b id="vt"></b><button class="s" id="vx">닫기</button></div>
+    <div class="works" id="vw"></div>
+    <b>작품 한마디</b><ul class="notes" id="vn"></ul>
+    <b>메시지 월</b><ul class="notes" id="vm"></ul>
+  </div>
+</div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const esc = t => String(t == null ? "" : t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const day = t => t ? new Date(t).toLocaleDateString("ko-KR", { year: "2-digit", month: "numeric", day: "numeric" }) : "-";
+let KEY = "", ALL = [];
+try { KEY = sessionStorage.getItem("wg_admin") || ""; } catch (_) {}
+
+async function api(path, body, admin) {
+  const r = await fetch("/api" + path, body === undefined ? { cache: "no-store", headers: admin ? { "x-admin": KEY } : {} } : { method: "POST", headers: { "Content-Type": "text/plain;charset=UTF-8" }, body: JSON.stringify(Object.assign({ admin: KEY }, body)) });
+  let j = null; try { j = await r.json(); } catch (_) {}
+  if (!r.ok) throw Object.assign(new Error((j && j.error) || "http_" + r.status), { code: (j && j.error) || "http_" + r.status, status: r.status });
+  return j;
+}
+const op = (code, o) => api(`/show/${code}/op`, o);
+
+async function load() {
+  try { ALL = await api("/admin/shows", undefined, true); }
+  catch (e) { $("#lmsg").innerHTML = `<span class="bad">${e.status === 403 ? "운영자 키가 맞지 않거나, 클라우드플레어에 ADMIN_KEY가 아직 없어요 (16자 이상)." : "불러오지 못했어요: " + esc(e.code)}</span>`; $("#login").hidden = false; $("#main").hidden = true; return; }
+  try { sessionStorage.setItem("wg_admin", KEY); } catch (_) {}
+  $("#login").hidden = true; $("#main").hidden = false; paint();
+}
+function paint() {
+  const q = $("#q").value.trim().toUpperCase(), sort = $("#sort").value, now = Date.now();
+  let L = ALL.filter(x => !q || (x.code + " " + x.name + " " + x.theme).toUpperCase().includes(q));
+  L.sort(sort === "old" ? (a, b) => a.updated - b.updated : sort === "created" ? (a, b) => b.created - a.created : sort === "works" ? (a, b) => b.works - a.works : (a, b) => b.updated - a.updated);
+  const works = ALL.reduce((n, x) => n + (x.works || 0), 0), stale = ALL.filter(x => now - x.updated > 180 * 864e5).length, empty = ALL.filter(x => !x.works && now - x.created > 864e5).length;
+  $("#stats").innerHTML = `<div><b>${ALL.length}</b>전시회</div><div><b>${works}</b>작품</div><div><b>약 ${(works * 0.11 / 1024).toFixed(2)}GB</b>/ 5GB 무료 (추정)</div><div><b>${ALL.filter(x => x.open).length}</b>열려 있음</div><div><b class="old">${stale}</b>6개월 넘게 안 고침</div><div><b>${empty}</b>만들다 만 빈 전시회</div>`;
+  $("#tb").innerHTML = L.map(x => `<tr><td><code>${esc(x.code)}</code></td><td>${esc([x.name, x.theme && x.theme + " 전시회"].filter(Boolean).join(" ") || "(이름 없음)")}</td><td>${x.works || 0}</td><td><span class="tag ${x.open ? "on" : ""}">${x.open ? "열림" : "닫힘"}</span></td><td>${day(x.created)}</td><td class="${now - x.updated > 180 * 864e5 ? "old" : ""}">${day(x.updated)}</td>
+    <td><div class="acts"><button class="s" data-a="view" data-c="${esc(x.code)}">보기</button><button class="s" data-a="toggle" data-c="${esc(x.code)}">${x.open ? "닫기" : "열기"}</button><button class="s" data-a="save" data-c="${esc(x.code)}">내려받기</button><button class="d" data-a="del" data-c="${esc(x.code)}">지우기</button></div></td></tr>`).join("") || `<tr><td colspan="7">전시회가 없어요</td></tr>`;
+}
+async function view(code) {
+  $("#view").style.display = "block"; $("#vt").textContent = "불러오는 중…"; $("#vw").innerHTML = ""; $("#vn").innerHTML = ""; $("#vm").innerHTML = "";
+  const [r, notes, wall] = await Promise.all([api("/show/" + code), api(`/show/${code}/list/notes`), api(`/show/${code}/list/wall`)]);
+  $("#vt").textContent = `${code} · ${r.head.name || ""} ${r.head.theme || ""} (작품 ${Object.keys(r.works).length}점)`;
+  $("#vw").innerHTML = Object.entries(r.works).map(([id, w]) => `<figure><img src="${esc(/^data:image\//.test(w.img || "") ? w.img : "")}" alt=""><div><b>${esc(w.name)}</b> ${esc(w.title)}</div><div>${esc(w.desc)}</div><button class="d" data-a="unwork" data-c="${esc(code)}" data-id="${esc(id)}" style="margin-top:4px;padding:3px 8px;font-size:12px">작품 빼기</button></figure>`).join("");
+  const li = (kind, rows) => rows.sort((a, b) => b.ts - a.ts).map(n => `<li><span><b>${esc(n.nick)}</b> ${esc(n.text)}</span><button class="d" data-a="rm" data-k="${kind}" data-c="${esc(code)}" data-id="${esc(n._id)}" style="padding:3px 8px;font-size:12px">지우기</button></li>`).join("") || "<li>없어요</li>";
+  $("#vn").innerHTML = li("notes", notes); $("#vm").innerHTML = li("wall", wall);
+  $("#view").scrollIntoView({ behavior: "smooth" });
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest("button[data-a]"); if (!b) return; const code = b.dataset.c, a = b.dataset.a; b.disabled = true;
+  try {
+    if (a === "view") await view(code);
+    else if (a === "toggle") { const { head } = await op(code, { op: "claim" }); head.open = !head.open; await op(code, { op: "head", head }); await load(); }
+    else if (a === "save") {
+      const [r, notes, wall] = await Promise.all([api("/show/" + code), api(`/show/${code}/list/notes`), api(`/show/${code}/list/wall`)]);
+      const { key } = await op(code, { op: "claim" });
+      const url = URL.createObjectURL(new Blob([JSON.stringify({ code, key, head: r.head, works: r.works, notes, wall, savedAt: new Date().toISOString() })], { type: "application/json" }));
+      const l = document.createElement("a"); l.href = url; l.download = `woorigallery-${code}.json`; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+    else if (a === "del") { if (confirm(`${code} 전시회를 지울까요? 작품과 글이 모두 사라지고 되돌릴 수 없어요.\n(필요하면 먼저 '내려받기'로 보관해 두세요)`)) { await op(code, { op: "delete" }); $("#view").style.display = "none"; await load(); } }
+    else if (a === "unwork") { if (confirm("이 작품을 전시회에서 뺄까요?")) { const { head } = await op(code, { op: "claim" }); head.order = (head.order || []).filter(x => x !== b.dataset.id); await op(code, { op: "head", head }); await op(code, { op: "unwork", id: b.dataset.id }); await view(code); } }
+    else if (a === "rm") { await op(code, { op: "rm", kind: b.dataset.k, id: b.dataset.id }); b.closest("li").remove(); }
+  } catch (err) { alert("하지 못했어요: " + (err.code || err.message)); }
+  finally { b.disabled = false; }
+});
+$("#go").onclick = () => { KEY = $("#key").value.trim(); load(); };
+$("#key").addEventListener("keydown", e => { if (e.key === "Enter") $("#go").click(); });
+$("#q").oninput = paint; $("#sort").onchange = paint; $("#reload").onclick = load; $("#vx").onclick = () => ($("#view").style.display = "none");
+if (KEY) load();
+</script>
+</body>
+</html>

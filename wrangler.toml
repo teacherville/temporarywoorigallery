@@ -1,0 +1,37 @@
+name = "woorigallery"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# 화면 파일(index.html, check.html, admin.html, 그림 등): public 폴더 그대로 내보내요. 무료·무제한
+[assets]
+directory = "./public"
+
+# 오류가 나면 대시보드(Workers & Pages → woorigallery → Logs)에서 볼 수 있게 기록을 남겨요
+[observability]
+enabled = true
+
+# 저장소 (모두 무료 요금제에서 쓰는 SQLite 방식)
+#  SHOW     전시회 하나 = 하나
+#  TEACHER  선생님 목록 하나 = 하나
+#  REGISTRY 전체 전시회 목록 (운영자 페이지용, 하나뿐)
+#  GATE     인터넷 주소마다 하루 생성 수
+# ⚠️ 이 이름들(class_name)과 아래 migrations는 바꾸거나 지우지 마세요. 저장된 전시회가 모두 사라질 수 있어요.
+[[durable_objects.bindings]]
+name = "SHOW"
+class_name = "Show"
+
+[[durable_objects.bindings]]
+name = "TEACHER"
+class_name = "Teacher"
+
+[[durable_objects.bindings]]
+name = "REGISTRY"
+class_name = "Registry"
+
+[[durable_objects.bindings]]
+name = "GATE"
+class_name = "Gate"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Show", "Teacher", "Registry", "Gate"]
