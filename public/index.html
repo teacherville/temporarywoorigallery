@@ -80,10 +80,12 @@ const NETWATCH = (() => {
 <meta property="og:type" content="website">
 <meta property="og:title" content="우리반 전시회">
 <meta property="og:description" content="우리 반 그림이 걸린 3D 미술관">
-<meta property="og:image" content="thumbnail.jpg">
+<meta property="og:url" content="https://teacherville-woorigallery.teacherville.workers.dev/">
+<meta property="og:image" content="https://teacherville-woorigallery.teacherville.workers.dev/thumbnail.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://teacherville-woorigallery.teacherville.workers.dev/thumbnail.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@600;700&family=Gowun+Dodum&display=swap">
@@ -879,7 +881,7 @@ html:not(.touch) #emoBar,html:not(.touch) #camBtns{width:252px}
         <li>이름, 연락처 같은 개인정보는 받지 않아요. 작품과 입장할 때는 <b>번호나 별명</b>을 적어 주세요.</li>
         <li>아이 실명이나 얼굴이 보이는 사진은 올리지 말아 주세요.</li>
         <li>저장되는 내용: 반 이름, 전시 주제, 작품 사진, 번호·별명, 쪽지·방명록</li>
-        <li id="ntWhere">저장 위치: Cloudflare (아시아 지역)</li>
+        <li id="ntWhere">저장 위치: Cloudflare 데이터 센터 (아시아·태평양)</li>
         <li>다 쓴 전시회는 내 전시회 목록의 <b>⋯ → 지우기</b>를 누르면 작품과 글이 모두 지워져요. <b>전시 닫기</b>는 입장만 막아요.</li>
         <li id="ntDel">개인정보가 담겼거나 부적절한 작품·글은 운영자가 지울 수 있어요.</li>
         <li>1년 동안 선생님도 아이들도 들어오지 않은 전시회는 저절로 지워져요.</li>
@@ -949,7 +951,7 @@ html:not(.touch) #emoBar,html:not(.touch) #camBtns{width:252px}
           <label class="lab full">입구 소개 글<textarea class="f" id="tIntro" maxlength="300" rows="3"></textarea></label>
           <label class="lab full">마무리 글<textarea class="f" id="tOutro" maxlength="200" rows="3"></textarea></label>
         </div></details></div>
-      <div class="st st3"><div class="qEmoji"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg></div><h2 class="qTitle">어떤 작품을 전시할까요?</h2><div class="pnote" role="note"><b>사진 올리기 전에 꼭 확인해 주세요</b><ul><li>개인정보는 받지 않아요. 작품에는 <em>번호나 별명</em>을 적어 주세요.</li><li>아이 얼굴이나 이름표가 보이는 사진은 올리지 말아 주세요.</li><li class="pn-where">작품과 글은 Cloudflare(아시아 지역)에 저장돼요.</li><li class="pn-del">개인정보가 담겼거나 부적절한 작품은 운영자가 지울 수 있어요.</li></ul></div><div class="upload">
+      <div class="st st3"><div class="qEmoji"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg></div><h2 class="qTitle">어떤 작품을 전시할까요?</h2><div class="pnote" role="note"><b>사진 올리기 전에 꼭 확인해 주세요</b><ul><li>개인정보는 받지 않아요. 작품에는 <em>번호나 별명</em>을 적어 주세요.</li><li>아이 얼굴이나 이름표가 보이는 사진은 올리지 말아 주세요.</li><li class="pn-where">작품과 글은 Cloudflare 데이터 센터(아시아·태평양)에 저장돼요.</li><li class="pn-del">개인정보가 담겼거나 부적절한 작품은 운영자가 지울 수 있어요.</li></ul></div><div class="upload">
         <label class="btn-main big" for="tBulk" tabindex="0" id="tBulkL">작품 사진 올리기</label><input type="file" id="tBulk" accept="image/*" multiple hidden>
       </div>
       <div id="tList" class="cards"></div></div>
